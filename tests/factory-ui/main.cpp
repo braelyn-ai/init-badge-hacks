@@ -123,7 +123,7 @@ void assert_invitation_qr(bool visible) {
     auto* code = find_qr(lv_display_get_screen_active(lv_display_get_default()));
     assert(code);
     assert(lv_obj_is_visible(code) == visible);
-    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 200);
+    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 240);
 }
 lv_obj_t* find_gif(lv_obj_t* object) {
     if (lv_obj_check_type(object, &lv_gif_class)) return object;
@@ -577,26 +577,29 @@ int main(int argc, char** argv) {
     assert(!find_label(lv_display_get_screen_active(display), "Scan to RSVP"));
     assert(!find_label(lv_display_get_screen_active(display), "Invite details coming soon"));
     auto* poster = find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art);
-    auto* invitation_scroll = lv_obj_get_parent(poster);
-    lv_area_t poster_area, qr_area;
+    lv_area_t poster_area;
     lv_obj_get_coords(poster, &poster_area);
     assert(poster_area.x1 == 84 && poster_area.y1 == 83);
-    auto* qr_frame = lv_obj_get_parent(find_qr(lv_display_get_screen_active(display)));
-    lv_obj_get_coords(qr_frame, &qr_area);
-    assert(qr_area.y1 == 389); // Thirty pixels peek below the centered artwork.
+    assert_invitation_qr(false);
+    assert(find_label(lv_display_get_screen_active(display), "Tap for QR code"));
     snapshot("after-dark-revealed");
     swipe(234, 360, 234, 160);
     assert(badge::ui_page_index() == 2);
-    assert(lv_obj_get_scroll_y(invitation_scroll) > 100);
-    lv_obj_get_coords(qr_frame, &qr_area);
-    assert(qr_area.y1 >= 54 && qr_area.y2 < 419);
+    assert_invitation_qr(false); // Drags cannot toggle the QR.
+    tap(234, 240);
     assert_invitation_qr(true);
-    snapshot("after-dark-qr-scrolled");
-    const auto saved_scroll = lv_obj_get_scroll_y(invitation_scroll);
+    assert(!lv_obj_is_visible(poster));
+    assert(find_label(lv_display_get_screen_active(display), "Tap to return"));
+    snapshot("after-dark-qr-expanded");
     badge::ui_update(model); spin();
-    assert(lv_obj_get_scroll_y(invitation_scroll) == saved_scroll);
-    swipe(234, 160, 234, 380);
-    lv_obj_scroll_to_y(invitation_scroll, 0, LV_ANIM_OFF); spin();
+    assert_invitation_qr(true);
+    tap(234, 240);
+    assert_invitation_qr(false);
+    assert(lv_obj_is_visible(poster));
+    tap(234, 402); // The caption is also a tap target.
+    assert_invitation_qr(true);
+    tap(234, 402);
+    assert_invitation_qr(false);
 
     starts = vibration_starts;
     code_prefix(); code_pulse(true, 40);

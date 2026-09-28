@@ -10,8 +10,8 @@ or unlocked; the exact `tap the code to reveal a secret invitation` prompt; whol
 complete-word callbacks, immediate code retry after an explicit relock, and cancellation on drags, press loss, page/modal changes
 and rotation; noninterrupting timed reveal during agenda scrolling/modals;
 the supplied artwork hidden while locked/during the words, upward slide, centered
-poster with QR peek, vertical swipe to a fully visible official event QR, and
-scroll position retained during updates;
+rounded poster, completed artwork/caption taps to toggle the official event QR
+and return, drag rejection, and QR view retained during updates;
 the ordered three-word reveal, one-shot native GIF and cleanup on completion or
 early navigation, with no replay on already-unlocked entry or timed reveal;
 supplied-brand chrome and square page indicators after partial redraws; no redraws on idle

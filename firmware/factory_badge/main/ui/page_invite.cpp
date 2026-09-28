@@ -22,21 +22,29 @@ public:
         lv_obj_set_style_pad_row(input_display_, 10, 0);
         set_hidden(input_display_, true);
         invitation_ = container(root_, 74, 54, 320, 365);
-        lv_obj_add_flag(invitation_, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_remove_flag(invitation_, LV_OBJ_FLAG_SCROLL_ELASTIC);
-        lv_obj_remove_flag(invitation_, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
-        lv_obj_set_scroll_dir(invitation_, LV_DIR_VER);
-        lv_obj_set_scrollbar_mode(invitation_, LV_SCROLLBAR_MODE_OFF);
         lv_obj_set_style_bg_color(invitation_, lv_color_black(), 0);
         lv_obj_set_style_bg_opa(invitation_, LV_OPA_COVER, 0);
-        lv_obj_set_style_pad_bottom(invitation_, 20, 0);
-        artwork_ = lv_image_create(invitation_);
+        auto* artwork_frame = container(invitation_, 10, 29, 300, 300);
+        lv_obj_set_style_radius(artwork_frame, 16, 0);
+        lv_obj_set_style_clip_corner(artwork_frame, true, 0);
+        lv_obj_remove_flag(artwork_frame, LV_OBJ_FLAG_CLICKABLE);
+        artwork_ = lv_image_create(artwork_frame);
         lv_image_set_src(artwork_, &invitation_art);
-        lv_obj_set_pos(artwork_, 10, 29); // Artwork center is display (234,233).
+        lv_obj_set_pos(artwork_, 0, 0); // Artwork center is display (234,233).
         lv_obj_remove_flag(artwork_, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(artwork_, LV_OBJ_FLAG_GESTURE_BUBBLE);
-        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 60, 335, 200, 24);
+        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 40, 59, 240, 24);
         lv_obj_remove_flag(invitation_qr_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_remove_flag(lv_obj_get_child(invitation_qr_, 0), LV_OBJ_FLAG_CLICKABLE);
+        qr_caption_ = label(invitation_, "Tap for QR code", 0, 340, 320, &font_mono_semibold_12, muted());
+        set_hidden(invitation_qr_, true);
+        on_tap(invitation_, [this] {
+            if (!context_.model.after_dark_unlocked || revealing()) return;
+            qr_expanded_ = !qr_expanded_;
+            set_hidden(lv_obj_get_parent(artwork_), qr_expanded_);
+            set_hidden(invitation_qr_, !qr_expanded_);
+            set_text(qr_caption_, qr_expanded_ ? "Tap to return" : "Tap for QR code");
+        });
         // Ordinary on_tap rejects long presses. This surface instead feeds
         // native press durations to the existing bounded Morse recognizer.
         // Non-clickable labels pass through to the whole page; the separate
@@ -215,7 +223,6 @@ private:
         set_hidden(self.prompt_, !active);
         if (!active) {
             self.celebration_done_ = true;
-            lv_obj_scroll_to_y(self.invitation_, 0, LV_ANIM_OFF);
             lv_anim_t slide;
             lv_anim_init(&slide);
             lv_anim_set_var(&slide, &self);
@@ -277,13 +284,13 @@ private:
         // LONG_PRESSED is intentionally accepted: holds are Morse dashes.
     }
     lv_obj_t *invitation_ = nullptr, *artwork_ = nullptr, *prompt_ = nullptr,
-             *invitation_qr_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
+             *invitation_qr_ = nullptr, *qr_caption_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
     MorseUnlock morse_;
     std::string displayed_input_;
     lv_point_t start_{};
     uint32_t restart_count_ = 0, pressed_at_ = 0;
     int displayed_state_ = -1, reveal_stage_ = 3;
-    bool held_ = false, armed_ = false, submitted_ = false, celebration_done_ = false, restarting_ = false,
+    bool qr_expanded_ = false, held_ = false, armed_ = false, submitted_ = false, celebration_done_ = false, restarting_ = false,
          pressed_feedback_ = false;
 };
 std::unique_ptr<PageView> make_after_dark(Context& c, lv_obj_t* p) { return std::make_unique<InvitePage>(c, p); }

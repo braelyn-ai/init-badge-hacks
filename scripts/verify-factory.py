@@ -70,15 +70,13 @@ def capture_pages(device, out):
         picture = device.capture(out / f"page-{index}.png")
         captured.append(index)
         if index == 2:
-            # The initial poster view intentionally clips the invitation QR.
+            # The initial poster view keeps its QR hidden until a completed tap.
             assert not zxingcpp.read_barcodes(picture)
             if state.get("after_dark_unlocked"):
-                device.touch("begin", 234, 360)
-                for y in range(340, 139, -20):
-                    device.touch("move", 234, y)
-                    time.sleep(.03)
-                device.touch("end", 234, 140)
-                time.sleep(.6)
+                device.touch("begin", 234, 240)
+                time.sleep(.1)
+                device.touch("end", 234, 240)
+                time.sleep(.2)
                 invitation = device.capture(out / "page-2-qr.png")
                 mask = Image.new("L", invitation.size)
                 ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
