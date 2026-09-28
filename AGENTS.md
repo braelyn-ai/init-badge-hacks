@@ -45,8 +45,8 @@
   IBM Plex Mono Medium names, Regular company, Medium agenda metadata, SemiBold
   captions, and Inter Medium for Suisse Intl Medium. Use the pinned
   native font converter in `scripts/generate-design-fonts.py`.
-  Company is optional manual profile data; schedule
-  bookmarks persist separately. A configured profile hides chrome but retains
+  Company is optional manual profile data. Schedule bookmarks are removed from
+  the UI; retained legacy storage is not read into a visible bookmark control. A configured profile hides chrome but retains
   physical/horizontal paging and tap-to-QR. Do not substitute the mockup's sample
   QR for real phone credentials or a pending invitation destination.
 - Normal operation has Wi-Fi and Bluetooth off. Temporary setup is AP-only,
@@ -66,7 +66,11 @@
   current rows say On now, passed rows are dimmed, and invalid time marks neither.
   Schedule opens with the current event centered between the arrows (first event
   if none is current); native LVGL center snapping settles swipes on an event.
-  Clock/bookmark updates preserve the reader's position.
+  Clock updates preserve the reader's position.
+  Schedule cards use 18px times and 24px wrapped titles, speaker details only,
+  no location rows, no bookmarks and no subtitle. The active card has a stepped
+  outline and right-aligned On now. Use RGB565-neutral card levels: #181818 for
+  current/upcoming, #101010 before the past-state 50% opacity.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
   conference profile/photo/links, bookmarks, UI preferences and After Dark unlock;

@@ -1,15 +1,15 @@
 #include "widgets.h"
-#include "design_assets.h"
 #include "../schedule.h"
 #include <array>
-#include <limits>
 
 namespace badge::ui {
 namespace {
 constexpr int RowWidth = 273;
 constexpr int ContentWidth = RowWidth - 32; // Fourteen-pixel padding plus the reserved border.
-constexpr int ListTop = 126;
-constexpr int ListHeight = 254;
+constexpr int ListTop = 100;
+constexpr int ListHeight = 280;
+// RGB565 maps #161616 to (16,20,16). Use equal representable channel levels.
+constexpr uint32_t CardGray = 0x181818;
 constexpr int FocusY = Height / 2; // Same vertical center as the navigation arrows.
 
 lv_obj_t* wrapped_label(lv_obj_t* parent, const char* text, const lv_font_t* font, lv_color_t color) {
@@ -23,7 +23,6 @@ lv_obj_t* wrapped_label(lv_obj_t* parent, const char* text, const lv_font_t* fon
 struct ScheduleRow {
     lv_obj_t* box = nullptr;
     lv_obj_t* now = nullptr;
-    lv_obj_t* bookmark_icon = nullptr;
     badge_schedule::State state = badge_schedule::State::Unknown;
     bool styled = false;
 };
@@ -60,28 +59,13 @@ void draw_notches(lv_event_t* event) {
     }
 }
 
-lv_obj_t* bookmark(lv_obj_t* parent, std::function<void()> action) {
-    // Overlay the card rather than the short time header: the full bookmark
-    // silhouette extends below that line and must remain unclipped.
-    auto* target = container(parent, ContentWidth - 35, -6, 40, 40);
-    lv_obj_add_flag(target, LV_OBJ_FLAG_IGNORE_LAYOUT);
-    lv_obj_set_ext_click_area(target, 0);
-    on_tap(target, std::move(action));
-    auto* icon = lv_image_create(target);
-    lv_image_set_src(icon, &supplied_bookmark_outline);
-    lv_obj_center(icon);
-    lv_obj_set_style_image_recolor(icon, white(), 0);
-    lv_obj_set_style_image_recolor_opa(icon, LV_OPA_COVER, 0);
-    lv_obj_remove_flag(icon, LV_OBJ_FLAG_CLICKABLE);
-    return icon;
-}
+
 }
 
 class SchedulePage final : public PageView {
 public:
     SchedulePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         label(root_, "Schedule", 84, 52, 300, &font_sans_24, cream());
-        subtitle_ = label(root_, "", 64, 87, 340, &font_mono_semibold_12, muted());
         list_ = container(root_, 98, ListTop, RowWidth, ListHeight);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);
@@ -107,27 +91,23 @@ public:
             lv_obj_set_style_pad_row(row.box, 0, 0);
             lv_obj_set_style_bg_opa(row.box, LV_OPA_COVER, 0);
             lv_obj_set_style_radius(row.box, 0, 0);
-            // Time and bookmark changes never change row geometry or discard
+            // Clock changes never change row geometry or discard
             // the attendee's current native scrolling position.
             lv_obj_set_style_border_width(row.box, 2, 0);
             lv_obj_set_style_border_color(row.box, white(), 0);
             lv_obj_add_event_cb(row.box, draw_notches, LV_EVENT_DRAW_MAIN_END, &row);
-            auto* header = container(row.box, 0, 0, ContentWidth, 16);
-            auto* time = label(header, item.time, 0, 0, 110, &font_mono_12, white());
+            auto* header = container(row.box, 0, 0, ContentWidth, 26);
+            auto* time = label(header, item.time, 0, 0, 145, &font_mono_18, white());
             lv_obj_set_style_text_align(time, LV_TEXT_ALIGN_LEFT, 0);
-            row.now = label(header, "", 112, 0, 82, &font_mono_12, white());
+            row.now = label(header, "", ContentWidth - 82, 4, 82, &font_mono_12, muted());
             lv_obj_set_style_text_align(row.now, LV_TEXT_ALIGN_RIGHT, 0);
-            auto* title = wrapped_label(row.box, item.title, &font_sans_20, white());
-            lv_obj_set_style_margin_top(title, 1, 0);
+            auto* title = wrapped_label(row.box, item.title, &font_sans_24, white());
+            lv_obj_set_style_margin_top(title, 3, 0);
             if (item.detail && item.detail[0]) {
                 auto* detail = wrapped_label(row.box, item.detail, &font_mono_12, muted());
                 lv_obj_set_style_margin_top(detail, 13, 0);
             }
-            row.bookmark_icon = bookmark(row.box, [this, i] {
-                context_.model.schedule_bookmarks ^= uint16_t(1) << i;
-                if (context_.callbacks.bookmark) context_.callbacks.bookmark(int(i));
-                update_bookmarks();
-            });
+
         }
         label(root_, "Swipe up or down", 84, 394, 300, &font_mono_semibold_12, muted());
         update();
@@ -141,11 +121,9 @@ public:
     }
 
     void update() override {
-        update_bookmarks();
         const int minute = context_.model.clock_valid ? context_.model.schedule_minute : -1;
         if (minute == minute_) return;
         minute_ = minute;
-        set_text(subtitle_, minute < 0 ? "Set time in Settings" : "All times local");
         for (size_t i = 0; i < rows_.size(); ++i) {
             auto& row = rows_[i];
             const auto state = badge_schedule::state(i, minute);
@@ -155,23 +133,14 @@ public:
             const bool current = state == badge_schedule::State::OnNow;
             set_text(row.now, current ? "On now" : "");
             lv_obj_set_style_border_opa(row.box, current ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
-            lv_obj_set_style_bg_color(row.box, panel(), 0);
+            // The dimmed card also uses RGB565-aligned levels so opacity stays neutral.
+            lv_obj_set_style_bg_color(row.box, lv_color_hex(state == badge_schedule::State::Passed ? 0x101010 : CardGray), 0);
             lv_obj_set_style_opa(row.box, state == badge_schedule::State::Passed ? LV_OPA_50 : LV_OPA_COVER, 0);
         }
     }
 private:
-    void update_bookmarks() {
-        const uint16_t mask = context_.model.schedule_bookmarks;
-        if (bookmark_mask_ == mask) return;
-        bookmark_mask_ = mask;
-        for (size_t i = 0; i < rows_.size(); ++i)
-            lv_image_set_src(rows_[i].bookmark_icon, mask & (uint16_t(1) << i) ?
-                &supplied_bookmark : &supplied_bookmark_outline);
-    }
     int minute_ = -2;
-    uint16_t bookmark_mask_ = std::numeric_limits<uint16_t>::max();
     lv_obj_t* list_ = nullptr;
-    lv_obj_t* subtitle_ = nullptr;
     std::array<ScheduleRow, badge_schedule::Items.size()> rows_{};
 };
 std::unique_ptr<PageView> make_schedule(Context& c, lv_obj_t* p) { return std::make_unique<SchedulePage>(c, p); }

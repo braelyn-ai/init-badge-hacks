@@ -269,13 +269,16 @@ whole display pixels; its integer tracking rounds -0.24px/+0.3px to zero. Fonts
 use LVGL's standard converter and native rendering, with pinned sources, weights
 and Latin-1 subsets. Exported brand marks remain images, independent of typefaces.
 
-Tap a schedule bookmark to toggle its saved state. The nine-bit selection mask
-is independent of the clock and stored in versioned `conference_ui/agenda_saved`.
-Writes coalesce after 1.2 seconds; failed writes retry after five seconds, and
-Settings indicates a pending save. Scrolling/holds cannot bookmark a row. Current
-sessions use the white stepped border and **On now**; passing time never moves
-the reader's scroll or clears bookmarks. The mockup's repeated sample sessions
-and room names are replaced by the existing published agenda, not invented data.
+Schedule cards show published times in 18px IBM Plex Mono and wrapped titles in
+24px Inter, with available speaker details below. They have no location labels,
+bookmark controls or subtitle. Current sessions use the white stepped border
+and a muted, right-aligned `On now`; passing time preserves the reader's scroll.
+Saved bookmark records from older versions remain unused by this view.
+Current/upcoming backgrounds use #181818, yielding neutral RGB565 output
+(24,24,24). Past cards use #101010 before 50% opacity, yielding (8,8,8); this avoids
+the previous quantization-induced green tint. The viewport starts at Y=100 and
+extends to Y=380, reclaiming the removed subtitle's space. Native center snapping
+continues to align the selected card with the navigation arrows.
 
 The supplied phone/invitation QR graphics both encode the customization website.
 Phone setup continues to generate real local Wi-Fi credentials. The invitation
@@ -616,3 +619,19 @@ The ESP32 build and guarded flash passed (`UNIT_READY`, no storage initializatio
 USB-simulated completed taps opened the official QR, which decoded within the
 round-screen mask, then restored the poster framebuffer byte-for-byte. The badge
 was left on the rounded poster. Physical finger interaction was not measured.
+
+
+### September 28 simplified schedule design
+
+Applied the supplied stepped-card spec with subsequent user refinements: larger
+18px times/24px titles, no location data, bookmarks or subtitle, and neutral
+RGB565 card backgrounds. Published agenda wording/times and speaker details are
+retained. Host sanitizer tests pass all session boundaries, current-card centering,
+first/last swipe limits, unchanged row geometry on clock updates, no bookmark
+actions/assets, and exact neutral card pixels. Evidence: `.build/schedule-spec/`.
+The native firmware build and guarded flash completed with `UNIT_READY` and no
+storage initialization. Live framebuffer inspection confirmed (24,24,24) card
+background pixels, and a USB-simulated swipe changed the schedule frame while
+remaining on the page. Clock/storage readiness passed. The badge was left on
+Schedule with the current event centered. This does not measure physical finger
+interaction or subjective display color under ambient lighting.

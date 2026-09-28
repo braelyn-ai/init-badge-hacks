@@ -822,6 +822,8 @@ int main(int argc, char** argv) {
         const auto& item = badge_schedule::Items[i];
         auto* title = find_label(row, item.title);
         assert(title && find_label(row, item.time));
+        assert(lv_obj_get_style_text_font(title, LV_PART_MAIN) == &font_sans_24);
+        assert(lv_obj_get_style_text_font(find_label(row, item.time), LV_PART_MAIN) == &font_mono_18);
         assert(lv_label_get_long_mode(title) == LV_LABEL_LONG_WRAP);
         assert_inside(title, row);
         if (item.detail[0]) assert_inside(find_label(row, item.detail), row);
@@ -843,6 +845,8 @@ int main(int argc, char** argv) {
     snapshot("schedule-current");
     lv_area_t current_area;
     lv_obj_get_coords(current, &current_area);
+    // Neutral RGB565 levels: R=3/31, G=6/63, B=3/31 render as 24/24/24.
+    assert(pixels[(current_area.y1 + 20) * Width + current_area.x1 + 4] == 0x18c3);
     // The selected outline follows the stepped silhouette. A conventional
     // inset rectangular border used to paint into all four black cutouts.
     for (int y = 0; y < 10; ++y) for (int x = 0; x < 10; ++x) {
@@ -851,36 +855,14 @@ int main(int argc, char** argv) {
             for (int py : {current_area.y1 + y, current_area.y2 - y})
                 assert(pixels[py * Width + px] == expected);
     }
-    // The full bookmark notch must render below the short time header. Its
-    // former header parent clipped the bottom of the otherwise correct asset.
-    const auto& outline = badge::ui::supplied_bookmark_outline;
-    auto* outline_image = find_image(current, &outline);
-    assert(outline_image);
-    lv_area_t outline_area;
-    lv_obj_get_coords(outline_image, &outline_area);
-    int lower_outline_pixels = 0;
-    for (int y = 20; y < int(outline.header.h); ++y) for (int x = 0; x < int(outline.header.w); ++x) {
-        if (outline.data[y * outline.header.stride + x] != 255) continue;
-        ++lower_outline_pixels;
-        assert(pixels[(outline_area.y1 + y) * Width + outline_area.x1 + x] == 0xffff);
-    }
-    assert(lower_outline_pixels > 0);
-    const int bookmark_y = current_area.y1 + 26;
-    tap(340, bookmark_y);
-    assert(bookmarked == 1);
-    const int bookmarked_scroll = lv_obj_get_scroll_y(schedule);
-    model.schedule_bookmarks = 1 << 1;
-    badge::ui_update(model); spin();
-    assert(lv_obj_get_scroll_y(schedule) == bookmarked_scroll);
-    assert_schedule_center(current);
-    snapshot("schedule-bookmarked");
+    assert(!find_image(schedule, &badge::ui::supplied_bookmark_outline));
+    assert(!find_image(schedule, &badge::ui::supplied_bookmark));
+    assert(!find_label(lv_display_get_screen_active(display), "All times local"));
+    assert(!find_label(lv_display_get_screen_active(display), "Preview / event details pending"));
     bookmarked = -1;
-    touch(340, bookmark_y, true);
-    touch(310, bookmark_y, true);
-    touch(340, bookmark_y, true);
-    touch(340, bookmark_y, false);
-    assert(bookmarked == -1);
-
+    tap(340, current_area.y1 + 26);
+    assert(bookmarked == -1); // Schedule cards have no bookmark action.
+    lv_obj_scroll_to_view(current, LV_ANIM_OFF); spin();
     assert_idle();
     const int entry_scroll = lv_obj_get_scroll_y(schedule);
     swipe(234, 335, 234, 170);
@@ -916,7 +898,7 @@ int main(int argc, char** argv) {
     model.schedule_current = -1;
     badge::ui_update(model);
     spin();
-    assert(find_label(lv_display_get_screen_active(display), "Set time in Settings"));
+    assert(!find_label(lv_display_get_screen_active(display), "Set time in Settings"));
     assert(!find_label(schedule, "On now"));
     for (size_t i = 0; i < heights.size(); ++i) {
         auto* row = lv_obj_get_child(schedule, i);
@@ -974,7 +956,7 @@ int main(int argc, char** argv) {
     badge::ui_update(model); spin();
     schedule = reopen_schedule();
     assert_schedule_center(lv_obj_get_child(schedule, 0));
-    assert(find_label(lv_display_get_screen_active(display), "Set time in Settings"));
+    assert(!find_label(lv_display_get_screen_active(display), "Set time in Settings"));
     snapshot("schedule-invalid-entry");
     for (size_t i = 0; i < badge_schedule::Items.size(); ++i) {
         model.clock_valid = true;

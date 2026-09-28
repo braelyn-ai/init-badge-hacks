@@ -18,7 +18,8 @@ supplied-brand chrome and square page indicators after partial redraws; no redra
 static pages; release-only buttons; drag-out-and-back, within-button drag and
 long-hold cancellation for ordinary buttons (the code surface accepts holds);
 real agenda text and wrapped titles/details; current/past/upcoming
-styles, release-only bookmark toggles, invalid time, daily reset and preserved schedule scroll;
+styles, 18px times/24px titles, neutral RGB565 cards, absent bookmark controls,
+invalid time, daily reset and preserved schedule scroll;
 agenda entry and native swipe snapping center each row between the arrows within one pixel,
 including the first/last rows and entries without a current session or valid clock;
 settled agenda frames match a full redraw byte-for-byte after entry and endpoint swipes;
