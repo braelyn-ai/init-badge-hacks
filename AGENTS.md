@@ -77,7 +77,7 @@
   `tap the code to reveal a secret invitation`. Enter Morse
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation
   and pushers never enter Morse. A successful code plays the existing intro GIF
-  once with `You're` → `Invited` → `To`, then reveals the invitation heading.
+  once with `You're` → `Invited` → `To`, then slides the supplied event artwork upward into a scrollable invitation.
   Morse uses a 200 ms unit and standard 1/3/7 ratios: dot/symbol gap 200 ms,
   dash/letter gap 600 ms, word gap 1400 ms. Receive thresholds tolerate hand
   timing: dot/dash and letter gaps split at 400 ms; a word gap breaks `init`.
@@ -93,8 +93,10 @@
   taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,
   including later mornings on a fresh badge. Main owns the persistent versioned
   NVS unlock; timed reveal must not move the current page/scroll. The actual invite
-  URL is `https://luma.com/developers-after-dark`; unlocked content shows its QR
-  with `Invite details coming soon`, hidden during the three-word reveal. See
+  URL is `https://luma.com/developers-after-dark`. The unlocked page centers the
+  supplied 300px artwork with the live QR peeking below. Swipe up reveals the QR;
+  no separate heading/footer copy is shown. The native 450ms slide follows the
+  three-word reveal, with both artwork and QR hidden during those words. See
   `docs/conference-badge.md` for timing and persistence rules.
   USB `after_dark_reset` may clear only this latch when the user explicitly asks
   to retry it without clearing their profile. Confirmed Reset badge also clears

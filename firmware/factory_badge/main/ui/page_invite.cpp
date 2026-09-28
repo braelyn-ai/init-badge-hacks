@@ -1,5 +1,6 @@
 #include "widgets.h"
 #include "intro_loop.h"
+#include "invitation_art.h"
 #include "../morse_unlock.h"
 #include <algorithm>
 #include <cstdlib>
@@ -8,8 +9,6 @@ namespace badge::ui {
 class InvitePage final : public PageView {
 public:
     InvitePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        title_ = label(root_, "Developers", 54, 78, 360, &font_sans_32, cream());
-        subtitle_ = label(root_, "After Dark", 54, 120, 360, &font_sans_32, cream());
         lv_obj_set_style_bg_color(root_, lv_color_black(), 0);
         lv_obj_set_style_bg_opa(root_, LV_OPA_COVER, 0);
         lv_obj_set_style_bg_color(root_, panel(), LV_STATE_PRESSED);
@@ -22,8 +21,22 @@ public:
         lv_obj_set_style_pad_column(input_display_, 24, 0);
         lv_obj_set_style_pad_row(input_display_, 10, 0);
         set_hidden(input_display_, true);
-        footer_ = label(root_, "", 64, 367, 340, &font_mono_semibold_12, muted());
-        invitation_qr_ = qr(root_, "https://luma.com/developers-after-dark", 155, 195, 156, 16);
+        invitation_ = container(root_, 74, 54, 320, 365);
+        lv_obj_add_flag(invitation_, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(invitation_, LV_OBJ_FLAG_SCROLL_ELASTIC);
+        lv_obj_remove_flag(invitation_, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+        lv_obj_set_scroll_dir(invitation_, LV_DIR_VER);
+        lv_obj_set_scrollbar_mode(invitation_, LV_SCROLLBAR_MODE_OFF);
+        lv_obj_set_style_bg_color(invitation_, lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(invitation_, LV_OPA_COVER, 0);
+        lv_obj_set_style_pad_bottom(invitation_, 20, 0);
+        artwork_ = lv_image_create(invitation_);
+        lv_image_set_src(artwork_, &invitation_art);
+        lv_obj_set_pos(artwork_, 10, 29); // Artwork center is display (234,233).
+        lv_obj_remove_flag(artwork_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_flag(artwork_, LV_OBJ_FLAG_GESTURE_BUBBLE);
+        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 60, 335, 200, 24);
+        lv_obj_remove_flag(invitation_qr_, LV_OBJ_FLAG_CLICKABLE);
         // Ordinary on_tap rejects long presses. This surface instead feeds
         // native press durations to the existing bounded Morse recognizer.
         // Non-clickable labels pass through to the whole page; the separate
@@ -62,14 +75,12 @@ public:
         const bool revealed = context_.model.after_dark_unlocked;
         if (!revealing())
             set_text(prompt_, revealed ? "" : "tap the code to reveal a secret invitation");
-        set_text(footer_, revealed ? "Invite details coming soon" : "");
-        set_hidden(invitation_qr_, !revealed || revealing());
+        set_hidden(invitation_, !revealed || revealing());
         set_hidden(prompt_, revealed && !revealing());
         if (displayed_state_ != int(revealed)) {
             const bool code_accepted = revealed && submitted_ && displayed_state_ == 0;
             displayed_state_ = int(revealed);
-            set_hidden(title_, !revealed);
-            set_hidden(subtitle_, !revealed);
+
             lv_obj_set_y(prompt_, revealed ? 374 : 216);
             if (revealed) lv_obj_remove_flag(root_, LV_OBJ_FLAG_CLICKABLE);
             else lv_obj_add_flag(root_, LV_OBJ_FLAG_CLICKABLE);
@@ -200,11 +211,23 @@ private:
         if (self.reveal_stage_ == stage) return;
         self.reveal_stage_ = stage;
         const bool active = self.revealing();
-        set_hidden(self.title_, active);
-        set_hidden(self.subtitle_, active);
-        set_hidden(self.footer_, active);
-        set_hidden(self.invitation_qr_, active);
+        set_hidden(self.invitation_, active);
         set_hidden(self.prompt_, !active);
+        if (!active) {
+            self.celebration_done_ = true;
+            lv_obj_scroll_to_y(self.invitation_, 0, LV_ANIM_OFF);
+            lv_anim_t slide;
+            lv_anim_init(&slide);
+            lv_anim_set_var(&slide, &self);
+            lv_anim_set_exec_cb(&slide, [](void* view, int32_t y) {
+                auto& page = *static_cast<InvitePage*>(view);
+                lv_obj_set_style_translate_y(page.invitation_, y, 0);
+            });
+            lv_anim_set_values(&slide, Height, 0);
+            lv_anim_set_duration(&slide, 450);
+            lv_anim_set_path_cb(&slide, lv_anim_path_ease_out);
+            lv_anim_start(&slide);
+        }
         set_font(self.prompt_, active ? &font_sans_32 : &font_sans_24);
         lv_obj_set_y(self.prompt_, active ? 212 : 374);
         constexpr const char* words[] = {"You're", "Invited", "To", ""};
@@ -253,8 +276,8 @@ private:
         }
         // LONG_PRESSED is intentionally accepted: holds are Morse dashes.
     }
-    lv_obj_t *title_ = nullptr, *subtitle_ = nullptr, *prompt_ = nullptr,
-             *invitation_qr_ = nullptr, *footer_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
+    lv_obj_t *invitation_ = nullptr, *artwork_ = nullptr, *prompt_ = nullptr,
+             *invitation_qr_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
     MorseUnlock morse_;
     std::string displayed_input_;
     lv_point_t start_{};

@@ -23,7 +23,7 @@ page:
    tapping/holding anywhere on the page except
    its navigation arrows, or wait for the timed reveal below. Successful code
    plays the intro loop once with `You're` → `Invited` → `To`, then reveals the
-   event heading. The revealed invitation QR opens https://luma.com/developers-after-dark.
+   scrollable event artwork. The invitation QR below opens https://luma.com/developers-after-dark.
 4. **Badge**: square manual photo, name and optional company. A configured face
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
@@ -77,12 +77,16 @@ visualization shakes for 220 ms and fades for 160 ms, then clears. The next pres
 can interrupt this feedback immediately and starts a fresh attempt. Physical
 pushers retain their normal paging and setup behavior and cannot enter the code.
 
-On successful code entry, the exact front-page GIF plays once behind a native
-LVGL word sequence: `You're`, `Invited`, `To` for about 700 ms each. The event
-heading then returns with `You're invited` and a scannable event QR and the supplied `Invite details coming soon` footer.
-The ten-second loop releases its decoder/timer when finished or when the reader
-leaves; an already-unlocked page and timed reveals do not replay the code-success
-sequence. The static invitation remains until its real URL is supplied.
+On successful code entry, the front-page GIF backs the native words `You're`,
+`Invited`, `To` for about 700 ms each. After the final word, its decoder/timer is
+released and the supplied event artwork/QR viewport slides upward over 450 ms.
+The intact 300×300 artwork is centered at (234,233). A 30px peek of the 200px
+live-event QR below invites an upward swipe; native vertical scrolling reveals
+the full code with a quiet zone. There are no separate heading/footer labels.
+The page retains scroll position on model/clock updates. Re-entering an already
+unlocked page starts at the poster without replaying the code-success sequence;
+timed reveal likewise shows the poster without a celebration. Navigation destroys
+all page-owned animations, images and scroll state.
 
 The nominal timing follows [ITU-R M.1677-1 §2](https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.1677-1-200910-I!!PDF-E.pdf):
 dot and internal gap one unit, dash and letter gap three units, word gap seven
@@ -574,3 +578,26 @@ QR decodes at the new size. Evidence: `.build/after-dark-design/`.
 Guarded flashing completed with `UNIT_READY`, without formatting storage. Full
 and circular live-device frames decoded to the official event URL at the new QR
 size. Clock/storage were ready; the badge was left on the invitation page.
+
+
+### September 28 supplied event poster
+
+Replaced the standalone text/QR layout with the user's official 800×800 artwork,
+converted to a 300×300 native RGB565 asset. A 320×365 viewport at (74,54) centers
+the artwork at (234,233); the QR starts at display Y=389, peeking 30px into the
+viewport. Swiping up reveals its full 200×200 frame. The image is preserved as
+supplied, including its date and sponsor logos; no extra captions were added.
+
+Native sanitizer tests passed for word/reveal sequencing, slide completion,
+poster centering, QR peek, actual LVGL swipe scrolling, preserved scroll on
+model updates, modal/navigation cleanup and the existing Morse/input regressions.
+The ESP32 build passed. The circularly masked host QR frame decoded to the live
+event URL after scrolling. Evidence: `.build/after-dark-poster/`.
+
+Guarded flashing completed with `UNIT_READY` and no storage initialization. Fresh
+status preserved saved profile/settings/unlock indicators, with clock/storage ready
+and radios off. USB-simulated native swipes kept the page selected and revealed a
+live framebuffer QR that decoded within the round-screen mask. The badge was left
+at the poster/QR peek. No physical-finger claim or hardware unlock replay was made;
+this already-unlocked device retained its state. Application SHA-256:
+`21df026dbb6e87aa638883bc60dcc72c850e89cab51588a269878dc06b93f8e8`.

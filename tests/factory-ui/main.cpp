@@ -2,6 +2,7 @@
 #include "schedule.h"
 #include "ui/design_fonts.h"
 #include "ui/design_assets.h"
+#include "ui/invitation_art.h"
 #include <mooncake.h>
 #include <cassert>
 #include <cstdio>
@@ -122,7 +123,7 @@ void assert_invitation_qr(bool visible) {
     auto* code = find_qr(lv_display_get_screen_active(lv_display_get_default()));
     assert(code);
     assert(lv_obj_is_visible(code) == visible);
-    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 156);
+    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 200);
 }
 lv_obj_t* find_gif(lv_obj_t* object) {
     if (lv_obj_check_type(object, &lv_gif_class)) return object;
@@ -289,8 +290,8 @@ int main(int argc, char** argv) {
     assert(invitation_prompt && lv_obj_get_height(invitation_prompt) <= 100);
     assert_invitation_qr(false);
     assert_inside(invitation_prompt, lv_obj_get_parent(invitation_prompt));
-    assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
-    assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "After Dark"), LV_OBJ_FLAG_HIDDEN));
+    assert(!lv_obj_is_visible(find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art)));
+    assert(!find_label(lv_display_get_screen_active(display), "After Dark"));
     assert(lit_pixels(54, 78, 414, 166) == 0); // The secret event name is not painted while locked.
     assert(!find_gif(lv_display_get_screen_active(display)));
     snapshot("after-dark-locked");
@@ -559,7 +560,7 @@ int main(int argc, char** argv) {
     assert(celebration && lv_gif_is_loaded(celebration));
     assert(lv_gif_get_loop_count(celebration) == 1);
     assert(find_label(lv_display_get_screen_active(display), "You're"));
-    assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
+    assert(!lv_obj_is_visible(find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art)));
     assert_invitation_qr(false);
     snapshot("after-dark-youre");
     spin(30);
@@ -570,13 +571,33 @@ int main(int argc, char** argv) {
     snapshot("after-dark-to");
     spin(30);
     assert(!find_label(lv_display_get_screen_active(display), "You're invited"));
-    assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
-    assert(find_gif(lv_display_get_screen_active(display)) == celebration);
-    assert(lv_gif_get_current_frame_index(celebration) > 5);
+    spin(30); // Finish the 450ms upward slide after the words.
+    assert(lv_obj_is_visible(find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art)));
+    assert(!find_gif(lv_display_get_screen_active(display)));
     assert(!find_label(lv_display_get_screen_active(display), "Scan to RSVP"));
-    assert(find_label(lv_display_get_screen_active(display), "Invite details coming soon"));
-    assert_invitation_qr(true);
+    assert(!find_label(lv_display_get_screen_active(display), "Invite details coming soon"));
+    auto* poster = find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art);
+    auto* invitation_scroll = lv_obj_get_parent(poster);
+    lv_area_t poster_area, qr_area;
+    lv_obj_get_coords(poster, &poster_area);
+    assert(poster_area.x1 == 84 && poster_area.y1 == 83);
+    auto* qr_frame = lv_obj_get_parent(find_qr(lv_display_get_screen_active(display)));
+    lv_obj_get_coords(qr_frame, &qr_area);
+    assert(qr_area.y1 == 389); // Thirty pixels peek below the centered artwork.
     snapshot("after-dark-revealed");
+    swipe(234, 360, 234, 160);
+    assert(badge::ui_page_index() == 2);
+    assert(lv_obj_get_scroll_y(invitation_scroll) > 100);
+    lv_obj_get_coords(qr_frame, &qr_area);
+    assert(qr_area.y1 >= 54 && qr_area.y2 < 419);
+    assert_invitation_qr(true);
+    snapshot("after-dark-qr-scrolled");
+    const auto saved_scroll = lv_obj_get_scroll_y(invitation_scroll);
+    badge::ui_update(model); spin();
+    assert(lv_obj_get_scroll_y(invitation_scroll) == saved_scroll);
+    swipe(234, 160, 234, 380);
+    lv_obj_scroll_to_y(invitation_scroll, 0, LV_ANIM_OFF); spin();
+
     starts = vibration_starts;
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 1);
@@ -649,9 +670,9 @@ int main(int argc, char** argv) {
     assert(lv_obj_get_scroll_y(locked_schedule) == locked_scroll);
     badge::ui_open_after_dark(); spin();
     assert(badge::ui_page_index() == 2);
-    assert(find_label(lv_display_get_screen_active(display), "After Dark"));
-    assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
-    assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "After Dark"), LV_OBJ_FLAG_HIDDEN));
+    assert(find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art));
+    assert(lv_obj_is_visible(find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art)));
+    assert(!find_label(lv_display_get_screen_active(display), "After Dark"));
     assert(!find_gif(lv_display_get_screen_active(display))); // Timed reveals do not fake a code celebration.
     snapshot("after-dark-unlocked");
     badge::ui_page(-2); spin();
