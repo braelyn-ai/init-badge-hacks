@@ -20,7 +20,7 @@ lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, in
 void on_tap(lv_obj_t* object, std::function<void()> action);
 void set_text(lv_obj_t* object, const std::string& text);
 void set_hidden(lv_obj_t* object, bool hidden);
-lv_obj_t* qr(lv_obj_t* parent, const std::string& value, int x, int y, int size);
+lv_obj_t* qr(lv_obj_t* parent, const std::string& value, int x, int y, int size, int quiet_zone = 10);
 void brand(lv_obj_t* parent, int y, bool large = false);
 void request_setup(Context& context);
 std::string battery_text(int percentage);

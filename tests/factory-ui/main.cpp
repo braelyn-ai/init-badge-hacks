@@ -111,6 +111,19 @@ lv_obj_t* find_image(lv_obj_t* object, const lv_image_dsc_t* source) {
     }
     return nullptr;
 }
+lv_obj_t* find_qr(lv_obj_t* object) {
+    if (lv_obj_check_type(object, &lv_qrcode_class)) return object;
+    for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
+        if (auto* found = find_qr(lv_obj_get_child(object, i))) return found;
+    }
+    return nullptr;
+}
+void assert_invitation_qr(bool visible) {
+    auto* code = find_qr(lv_display_get_screen_active(display));
+    assert(code);
+    assert(lv_obj_is_visible(code) == visible);
+    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 200);
+}
 lv_obj_t* find_gif(lv_obj_t* object) {
     if (lv_obj_check_type(object, &lv_gif_class)) return object;
     for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
@@ -274,6 +287,7 @@ int main(int argc, char** argv) {
     badge::ui_page(1); spin();
     auto* invitation_prompt = find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation");
     assert(invitation_prompt && lv_obj_get_height(invitation_prompt) <= 100);
+    assert_invitation_qr(false);
     assert_inside(invitation_prompt, lv_obj_get_parent(invitation_prompt));
     assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
     assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "After Dark"), LV_OBJ_FLAG_HIDDEN));
@@ -546,6 +560,7 @@ int main(int argc, char** argv) {
     assert(lv_gif_get_loop_count(celebration) == 1);
     assert(find_label(lv_display_get_screen_active(display), "You're"));
     assert(lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
+    assert_invitation_qr(false);
     snapshot("after-dark-youre");
     spin(30);
     assert(find_label(lv_display_get_screen_active(display), "Invited"));
@@ -558,6 +573,9 @@ int main(int argc, char** argv) {
     assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
     assert(find_gif(lv_display_get_screen_active(display)) == celebration);
     assert(lv_gif_get_current_frame_index(celebration) > 5);
+    assert(find_label(lv_display_get_screen_active(display), "Scan to RSVP"));
+    assert(!find_label(lv_display_get_screen_active(display), "Invite details coming soon"));
+    assert_invitation_qr(true);
     snapshot("after-dark-revealed");
     starts = vibration_starts;
     code_prefix(); code_pulse(true, 40);

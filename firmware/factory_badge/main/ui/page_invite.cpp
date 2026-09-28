@@ -22,7 +22,8 @@ public:
         lv_obj_set_style_pad_column(input_display_, 24, 0);
         lv_obj_set_style_pad_row(input_display_, 10, 0);
         set_hidden(input_display_, true);
-        footer_ = label(root_, "", 64, 367, 340, &font_mono_semibold_12, muted());
+        footer_ = label(root_, "", 64, 407, 340, &font_mono_semibold_12, muted());
+        invitation_qr_ = qr(root_, "https://luma.com/developers-after-dark", 134, 166, 200, 24);
         // Ordinary on_tap rejects long presses. This surface instead feeds
         // native press durations to the existing bounded Morse recognizer.
         // Non-clickable labels pass through to the whole page; the separate
@@ -61,14 +62,14 @@ public:
         const bool revealed = context_.model.after_dark_unlocked;
         if (!revealing())
             set_text(prompt_, revealed ? "You're invited" : "tap the code to reveal a secret invitation");
-        set_text(footer_, revealed ? "Invite details coming soon" : "");
-        // No sample QR: the real invitation URL is still pending.
+        set_text(footer_, revealed ? "Scan to RSVP" : "");
+        set_hidden(invitation_qr_, !revealed || revealing());
         if (displayed_state_ != int(revealed)) {
             const bool code_accepted = revealed && submitted_ && displayed_state_ == 0;
             displayed_state_ = int(revealed);
             set_hidden(title_, !revealed);
             set_hidden(subtitle_, !revealed);
-            lv_obj_set_y(prompt_, revealed ? 249 : 216);
+            lv_obj_set_y(prompt_, revealed ? 374 : 216);
             if (revealed) lv_obj_remove_flag(root_, LV_OBJ_FLAG_CLICKABLE);
             else lv_obj_add_flag(root_, LV_OBJ_FLAG_CLICKABLE);
             if (code_accepted) celebrate();
@@ -201,8 +202,9 @@ private:
         set_hidden(self.title_, active);
         set_hidden(self.subtitle_, active);
         set_hidden(self.footer_, active);
+        set_hidden(self.invitation_qr_, active);
         set_font(self.prompt_, active ? &font_sans_32 : &font_sans_24);
-        lv_obj_set_y(self.prompt_, active ? 212 : 249);
+        lv_obj_set_y(self.prompt_, active ? 212 : 374);
         constexpr const char* words[] = {"You're", "Invited", "To", "You're invited"};
         set_text(self.prompt_, words[stage]);
     }
@@ -250,7 +252,7 @@ private:
         // LONG_PRESSED is intentionally accepted: holds are Morse dashes.
     }
     lv_obj_t *title_ = nullptr, *subtitle_ = nullptr, *prompt_ = nullptr,
-             *footer_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
+             *invitation_qr_ = nullptr, *footer_ = nullptr, *celebration_ = nullptr, *input_display_ = nullptr;
     MorseUnlock morse_;
     std::string displayed_input_;
     lv_point_t start_{};

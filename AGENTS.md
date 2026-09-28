@@ -93,7 +93,8 @@
   taps. Valid local date/time at or after October 7, 2026 at 13:30 also reveals it,
   including later mornings on a fresh badge. Main owns the persistent versioned
   NVS unlock; timed reveal must not move the current page/scroll. The actual invite
-  URL remains pending, so unlocked content says Coming soon. See
+  URL is `https://luma.com/developers-after-dark`; unlocked content shows its QR
+  with `Scan to RSVP`, hidden during the three-word reveal. See
   `docs/conference-badge.md` for timing and persistence rules.
   USB `after_dark_reset` may clear only this latch when the user explicitly asks
   to retry it without clearing their profile. Confirmed Reset badge also clears

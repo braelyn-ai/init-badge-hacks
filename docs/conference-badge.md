@@ -23,7 +23,7 @@ page:
    tapping/holding anywhere on the page except
    its navigation arrows, or wait for the timed reveal below. Successful code
    plays the intro loop once with `You're` → `Invited` → `To`, then reveals the
-   event heading. Actual invitation details remain pending the destination URL.
+   event heading. The revealed invitation QR opens https://luma.com/developers-after-dark.
 4. **Badge**: square manual photo, name and optional company. A configured face
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
@@ -79,7 +79,7 @@ pushers retain their normal paging and setup behavior and cannot enter the code.
 
 On successful code entry, the exact front-page GIF plays once behind a native
 LVGL word sequence: `You're`, `Invited`, `To` for about 700 ms each. The event
-heading then returns with `You're invited` and the pending-invitation footer.
+heading then returns with `You're invited` and a scannable event QR and `Scan to RSVP` footer.
 The ten-second loop releases its decoder/timer when finished or when the reader
 leaves; an already-unlocked page and timed reveals do not replay the code-success
 sequence. The static invitation remains until its real URL is supplied.
@@ -275,7 +275,7 @@ and room names are replaced by the existing published agenda, not invented data.
 
 The supplied phone/invitation QR graphics both encode the customization website.
 Phone setup continues to generate real local Wi-Fi credentials. The invitation
-keeps a truthful unscannable placeholder pending the user's actual event URL.
+uses a generated QR for https://luma.com/developers-after-dark after unlock.
 The visible locked code surface and persistent reveal by code or clock follow
 the current policy above.
 
@@ -534,3 +534,24 @@ phone or hardware profile test.
 See [stock UI source research](stock-ui-reference.md) for the inspected framework,
 versions and MIT licensing, and [factory stack](factory-stack.md) for the later
 decision to migrate the runtime, board adapter and views to the factory stack.
+
+### September 28 official invitation link
+
+The unlocked Developers After Dark page now displays a generated QR for
+`https://luma.com/developers-after-dark` and `Scan to RSVP`. The QR remains
+hidden while locked and during the three-word reveal. Its 200-pixel white frame
+provides at least four modules of quiet space around the code. Existing Morse,
+timed reveal, persistence and navigation behavior are unchanged.
+
+Native LVGL sanitizer checks passed, including locked/reveal visibility and
+existing page/input regressions. The native ESP32 build passed. Both full and
+circularly masked host frames decoded to the exact official URL. Private
+verification artifacts remain in `.build/after-dark-link/`.
+
+The guarded device flash completed with `UNIT_READY` and no storage initialization.
+Fresh status preserved all saved profile/settings/unlock indicators and confirmed
+clock/storage readiness, offline radios and advancing UI ticks. Full and circular
+live framebuffer captures decoded the exact event URL. The badge was left on the
+unlocked invitation for review. This is software QR decoding, not a physical
+phone-camera scan. Application SHA-256:
+`91328ab8bdb5be8e6710f8744a4ad162d3db4837f27be5747aa14fde55185302`.

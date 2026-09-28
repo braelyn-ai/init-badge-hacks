@@ -69,6 +69,13 @@ def capture_pages(device, out):
         device.page(index); time.sleep(.2)
         picture = device.capture(out / f"page-{index}.png")
         captured.append(index)
+        if index == 2:
+            expected = ["https://luma.com/developers-after-dark"] if state.get("after_dark_unlocked") else []
+            mask = Image.new("L", picture.size)
+            ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
+            circular = Image.new("RGB", picture.size)
+            circular.paste(picture, mask=mask)
+            assert [v.text for v in zxingcpp.read_barcodes(circular)] == expected
         if index == 4:
             mask = Image.new("L", picture.size)
             ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)

@@ -38,7 +38,9 @@ rotation cancel progress. A complete `init` invokes a UI callback; main owns the
 persistent `conference_ui/after_dark_v1` unlock (`0xA1`, cleared by confirmed badge
 reset) and fixed October 7, 2026 at 13:30 local clock policy. Ordinary pushers are
 only navigation/setup controls.
-The invitation stays unscannable until its real URL is supplied. This supersedes
+The unlocked invitation QR opens https://luma.com/developers-after-dark, with
+`Scan to RSVP` and a white quiet zone of at least four modules. It is hidden
+while locked and during the three-word reveal. This supersedes
 the earlier hidden-page/physical-pusher interaction without changing saved unlocks.
 Successful touch code uses the existing native intro GIF once behind a native
 LVGL word sequence (`You're`, `Invited`, `To`), then reveals the invitation heading.

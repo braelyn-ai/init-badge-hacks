@@ -9,6 +9,7 @@ Checks cover all six pages and centered indicators while the invitation is locke
 or unlocked; the exact `tap the code to reveal a secret invitation` prompt; whole-page native touch-Morse taps/holds,
 complete-word callbacks, immediate code retry after an explicit relock, and cancellation on drags, press loss, page/modal changes
 and rotation; noninterrupting timed reveal during agenda scrolling/modals;
+the official event QR hidden while locked/during the words and visible after reveal;
 the ordered three-word reveal, one-shot native GIF and cleanup on completion or
 early navigation, with no replay on already-unlocked entry or timed reveal;
 supplied-brand chrome and square page indicators after partial redraws; no redraws on idle

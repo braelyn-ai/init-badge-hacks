@@ -119,12 +119,12 @@ void set_hidden(lv_obj_t* object, bool hidden) {
     if (hidden) lv_obj_add_flag(object, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_remove_flag(object, LV_OBJ_FLAG_HIDDEN);
 }
-lv_obj_t* qr(lv_obj_t* parent, const std::string& value, int x, int y, int size) {
+lv_obj_t* qr(lv_obj_t* parent, const std::string& value, int x, int y, int size, int quiet_zone) {
     auto* frame = container(parent, x, y, size, size);
     lv_obj_set_style_bg_color(frame, white(), 0);
     lv_obj_set_style_bg_opa(frame, LV_OPA_COVER, 0);
     auto* code = lv_qrcode_create(frame);
-    lv_qrcode_set_size(code, size - 20);
+    lv_qrcode_set_size(code, size - 2 * quiet_zone);
     lv_qrcode_set_dark_color(code, lv_color_black());
     lv_qrcode_set_light_color(code, white());
     lv_obj_center(code);
