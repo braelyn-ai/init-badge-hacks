@@ -119,10 +119,10 @@ lv_obj_t* find_qr(lv_obj_t* object) {
     return nullptr;
 }
 void assert_invitation_qr(bool visible) {
-    auto* code = find_qr(lv_display_get_screen_active(display));
+    auto* code = find_qr(lv_display_get_screen_active(lv_display_get_default()));
     assert(code);
     assert(lv_obj_is_visible(code) == visible);
-    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 200);
+    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 156);
 }
 lv_obj_t* find_gif(lv_obj_t* object) {
     if (lv_obj_check_type(object, &lv_gif_class)) return object;
@@ -569,12 +569,12 @@ int main(int argc, char** argv) {
     assert(find_label(lv_display_get_screen_active(display), "To"));
     snapshot("after-dark-to");
     spin(30);
-    assert(find_label(lv_display_get_screen_active(display), "You're invited"));
+    assert(!find_label(lv_display_get_screen_active(display), "You're invited"));
     assert(!lv_obj_has_flag(find_label(lv_display_get_screen_active(display), "Developers"), LV_OBJ_FLAG_HIDDEN));
     assert(find_gif(lv_display_get_screen_active(display)) == celebration);
     assert(lv_gif_get_current_frame_index(celebration) > 5);
-    assert(find_label(lv_display_get_screen_active(display), "Scan to RSVP"));
-    assert(!find_label(lv_display_get_screen_active(display), "Invite details coming soon"));
+    assert(!find_label(lv_display_get_screen_active(display), "Scan to RSVP"));
+    assert(find_label(lv_display_get_screen_active(display), "Invite details coming soon"));
     assert_invitation_qr(true);
     snapshot("after-dark-revealed");
     starts = vibration_starts;
@@ -585,6 +585,7 @@ int main(int argc, char** argv) {
     spin(550); // One source loop finishes and releases its native decoder/timer.
     assert(!find_gif(lv_display_get_screen_active(display)));
     assert_idle();
+    snapshot("after-dark-design");
     // An explicit USB relock refreshes the same page, including its completed
     // gesture latch, so the attendee can immediately try the code again.
     model.after_dark_unlocked = false;
@@ -600,7 +601,7 @@ int main(int argc, char** argv) {
     assert(badge::ui_page_index() == 3);
     assert(!find_gif(lv_display_get_screen_active(display)));
     badge::ui_page(-1); spin();
-    assert(find_label(lv_display_get_screen_active(display), "You're invited"));
+    assert(!find_label(lv_display_get_screen_active(display), "You're invited"));
     assert(!find_gif(lv_display_get_screen_active(display)));
     assert_idle();
     model.after_dark_unlocked = false;

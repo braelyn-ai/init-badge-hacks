@@ -22,8 +22,8 @@ public:
         lv_obj_set_style_pad_column(input_display_, 24, 0);
         lv_obj_set_style_pad_row(input_display_, 10, 0);
         set_hidden(input_display_, true);
-        footer_ = label(root_, "", 64, 407, 340, &font_mono_semibold_12, muted());
-        invitation_qr_ = qr(root_, "https://luma.com/developers-after-dark", 134, 166, 200, 24);
+        footer_ = label(root_, "", 64, 367, 340, &font_mono_semibold_12, muted());
+        invitation_qr_ = qr(root_, "https://luma.com/developers-after-dark", 155, 195, 156, 16);
         // Ordinary on_tap rejects long presses. This surface instead feeds
         // native press durations to the existing bounded Morse recognizer.
         // Non-clickable labels pass through to the whole page; the separate
@@ -61,9 +61,10 @@ public:
         else sample(); // Observe letter spacing and the idle restart deadline.
         const bool revealed = context_.model.after_dark_unlocked;
         if (!revealing())
-            set_text(prompt_, revealed ? "You're invited" : "tap the code to reveal a secret invitation");
-        set_text(footer_, revealed ? "Scan to RSVP" : "");
+            set_text(prompt_, revealed ? "" : "tap the code to reveal a secret invitation");
+        set_text(footer_, revealed ? "Invite details coming soon" : "");
         set_hidden(invitation_qr_, !revealed || revealing());
+        set_hidden(prompt_, revealed && !revealing());
         if (displayed_state_ != int(revealed)) {
             const bool code_accepted = revealed && submitted_ && displayed_state_ == 0;
             displayed_state_ = int(revealed);
@@ -203,9 +204,10 @@ private:
         set_hidden(self.subtitle_, active);
         set_hidden(self.footer_, active);
         set_hidden(self.invitation_qr_, active);
+        set_hidden(self.prompt_, !active);
         set_font(self.prompt_, active ? &font_sans_32 : &font_sans_24);
         lv_obj_set_y(self.prompt_, active ? 212 : 374);
-        constexpr const char* words[] = {"You're", "Invited", "To", "You're invited"};
+        constexpr const char* words[] = {"You're", "Invited", "To", ""};
         set_text(self.prompt_, words[stage]);
     }
     void sample() {

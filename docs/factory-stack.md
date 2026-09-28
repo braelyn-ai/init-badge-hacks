@@ -39,7 +39,7 @@ persistent `conference_ui/after_dark_v1` unlock (`0xA1`, cleared by confirmed ba
 reset) and fixed October 7, 2026 at 13:30 local clock policy. Ordinary pushers are
 only navigation/setup controls.
 The unlocked invitation QR opens https://luma.com/developers-after-dark, with
-`Scan to RSVP` and a white quiet zone of at least four modules. It is hidden
+`Invite details coming soon` and a white quiet zone of at least four modules. It is hidden
 while locked and during the three-word reveal. This supersedes
 the earlier hidden-page/physical-pusher interaction without changing saved unlocks.
 Successful touch code uses the existing native intro GIF once behind a native

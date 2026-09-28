@@ -79,7 +79,7 @@ pushers retain their normal paging and setup behavior and cannot enter the code.
 
 On successful code entry, the exact front-page GIF plays once behind a native
 LVGL word sequence: `You're`, `Invited`, `To` for about 700 ms each. The event
-heading then returns with `You're invited` and a scannable event QR and `Scan to RSVP` footer.
+heading then returns with `You're invited` and a scannable event QR and the supplied `Invite details coming soon` footer.
 The ten-second loop releases its decoder/timer when finished or when the reader
 leaves; an already-unlocked page and timed reveals do not replay the code-success
 sequence. The static invitation remains until its real URL is supplied.
@@ -555,3 +555,22 @@ live framebuffer captures decoded the exact event URL. The badge was left on the
 unlocked invitation for review. This is software QR decoding, not a physical
 phone-camera scan. Application SHA-256:
 `91328ab8bdb5be8e6710f8744a4ad162d3db4837f27be5747aa14fde55185302`.
+
+
+### September 28 supplied invitation layout
+
+The user supplied `Developers After Dark.png` and requested its layout and only
+its text, while retaining the live event destination. The settled invitation
+has two title lines, a 156×156 white QR frame at (155,195), and the sole footer
+`Invite details coming soon` at label Y=367. Removed `You're invited` and
+`Scan to RSVP` from the settled screen. The existing three-word reveal animation
+remains transient; its prompt is hidden afterward. The QR still encodes
+`https://luma.com/developers-after-dark`, never the reference image's QR.
+Native fonts/chrome are retained on the 468×466 framebuffer; the supplied raster
+is 466×466, so font rasterization and horizontal pixel geometry are not identical.
+Native UI sanitizer tests and the ESP32 build pass. The host-rendered live-event
+QR decodes at the new size. Evidence: `.build/after-dark-design/`.
+
+Guarded flashing completed with `UNIT_READY`, without formatting storage. Full
+and circular live-device frames decoded to the official event URL at the new QR
+size. Clock/storage were ready; the badge was left on the invitation page.
