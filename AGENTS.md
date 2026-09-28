@@ -67,10 +67,11 @@
   Schedule opens with the current event centered between the arrows (first event
   if none is current); native LVGL center snapping settles swipes on an event.
   Clock updates preserve the reader's position.
-  Schedule cards use 18px times and 24px wrapped titles, speaker details only,
-  no location rows, no bookmarks and no subtitle. The active card has a stepped
+  Schedule cards use 18px times and 24px wrapped titles, a 9px time-to-title layout gap,
+  no bylines/location rows, no bookmarks and no subtitle. The active card has a stepped
   outline and right-aligned On now. Use RGB565-neutral card levels: #181818 for
-  current/upcoming, #101010 before the past-state 50% opacity.
+  current, #101010 upcoming, and #101010 before the past-state 50% opacity.
+  Times use #E7E7E7, slightly dimmer than white titles.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
   conference profile/photo/links, bookmarks, UI preferences and After Dark unlock;

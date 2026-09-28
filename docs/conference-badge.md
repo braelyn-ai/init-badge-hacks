@@ -270,12 +270,13 @@ use LVGL's standard converter and native rendering, with pinned sources, weights
 and Latin-1 subsets. Exported brand marks remain images, independent of typefaces.
 
 Schedule cards show published times in 18px IBM Plex Mono and wrapped titles in
-24px Inter, with available speaker details below. They have no location labels,
+24px Inter, with a 9px layout gap after the time row. They have no bylines, location labels,
 bookmark controls or subtitle. Current sessions use the white stepped border
 and a muted, right-aligned `On now`; passing time preserves the reader's scroll.
 Saved bookmark records from older versions remain unused by this view.
-Current/upcoming backgrounds use #181818, yielding neutral RGB565 output
-(24,24,24). Past cards use #101010 before 50% opacity, yielding (8,8,8); this avoids
+Current backgrounds use #181818, yielding neutral RGB565 output (24,24,24).
+Upcoming cards use #101010 (16,16,16). Past cards use #101010 before 50% opacity,
+yielding (8,8,8); this avoids
 the previous quantization-induced green tint. The viewport starts at Y=100 and
 extends to Y=380, reclaiming the removed subtitle's space. Native center snapping
 continues to align the selected card with the navigation arrows.
@@ -635,3 +636,16 @@ background pixels, and a USB-simulated swipe changed the schedule frame while
 remaining on the page. Clock/storage readiness passed. The badge was left on
 Schedule with the current event centered. This does not measure physical finger
 interaction or subjective display color under ambient lighting.
+
+September 28 spacing refinement: increased the time-to-title layout gap from
+3px to 9px and removed all secondary bylines (including speaker/TBA/end-time
+notes) from the cards. Agenda source details remain available but are not rendered.
+
+September 28 tonal refinement: upcoming cards are one neutral RGB565 step darker
+than the current item (#101010 versus #181818); times use #E7E7E7 while titles
+remain white. Combined with the 9px title gap and absent bylines.
+Native UI sanitizer checks and the ESP32 build passed for the combined spacing,
+byline and tonal changes. Guarded flash completed with `UNIT_READY`, without
+storage initialization. Live screen capture confirmed both (24,24,24) current
+and (16,16,16) upcoming backgrounds. Clock/storage readiness passed; Schedule
+was left open. Evidence: `.build/schedule-final/`.

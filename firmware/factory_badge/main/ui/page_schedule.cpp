@@ -97,16 +97,13 @@ public:
             lv_obj_set_style_border_color(row.box, white(), 0);
             lv_obj_add_event_cb(row.box, draw_notches, LV_EVENT_DRAW_MAIN_END, &row);
             auto* header = container(row.box, 0, 0, ContentWidth, 26);
-            auto* time = label(header, item.time, 0, 0, 145, &font_mono_18, white());
+            auto* time = label(header, item.time, 0, 0, 145, &font_mono_18, lv_color_hex(0xE7E7E7));
             lv_obj_set_style_text_align(time, LV_TEXT_ALIGN_LEFT, 0);
             row.now = label(header, "", ContentWidth - 82, 4, 82, &font_mono_12, muted());
             lv_obj_set_style_text_align(row.now, LV_TEXT_ALIGN_RIGHT, 0);
             auto* title = wrapped_label(row.box, item.title, &font_sans_24, white());
-            lv_obj_set_style_margin_top(title, 3, 0);
-            if (item.detail && item.detail[0]) {
-                auto* detail = wrapped_label(row.box, item.detail, &font_mono_12, muted());
-                lv_obj_set_style_margin_top(detail, 13, 0);
-            }
+            lv_obj_set_style_margin_top(title, 9, 0);
+
 
         }
         label(root_, "Swipe up or down", 84, 394, 300, &font_mono_semibold_12, muted());
@@ -134,7 +131,7 @@ public:
             set_text(row.now, current ? "On now" : "");
             lv_obj_set_style_border_opa(row.box, current ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
             // The dimmed card also uses RGB565-aligned levels so opacity stays neutral.
-            lv_obj_set_style_bg_color(row.box, lv_color_hex(state == badge_schedule::State::Passed ? 0x101010 : CardGray), 0);
+            lv_obj_set_style_bg_color(row.box, lv_color_hex(current ? CardGray : 0x101010), 0);
             lv_obj_set_style_opa(row.box, state == badge_schedule::State::Passed ? LV_OPA_50 : LV_OPA_COVER, 0);
         }
     }

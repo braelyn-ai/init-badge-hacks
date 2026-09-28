@@ -805,7 +805,7 @@ int main(int argc, char** argv) {
     assert_chrome();
 
     // Opening the real agenda focuses the active session once. Past sessions
-    // dim, upcoming sessions stay readable, and full titles/details wrap.
+    // dim, upcoming sessions stay readable, and full titles wrap.
     model.clock_text = "9:45 AM";
     model.schedule_minute = 9 * 60 + 45;
     model.schedule_current = badge_schedule::current(model.schedule_minute);
@@ -826,7 +826,7 @@ int main(int argc, char** argv) {
         assert(lv_obj_get_style_text_font(find_label(row, item.time), LV_PART_MAIN) == &font_mono_18);
         assert(lv_label_get_long_mode(title) == LV_LABEL_LONG_WRAP);
         assert_inside(title, row);
-        if (item.detail[0]) assert_inside(find_label(row, item.detail), row);
+        if (item.detail[0]) assert(!find_label(row, item.detail));
         heights[i] = lv_obj_get_height(row);
     }
     auto* long_title = find_label(schedule, "Networking break and sponsors");
@@ -914,7 +914,7 @@ int main(int argc, char** argv) {
     badge::ui_update(model);
     spin();
     assert(find_label(lv_obj_get_child(schedule, 8), "On now"));
-    assert(find_label(lv_obj_get_child(schedule, 8), "End time not listed"));
+    assert(!find_label(lv_obj_get_child(schedule, 8), "End time not listed"));
     badge::ui_page(1); spin();
     badge::ui_page(-1); spin(); // Re-entry must make the late-day current row visible.
     auto* last_title = find_label(lv_display_get_screen_active(display), badge_schedule::Items[8].title);
