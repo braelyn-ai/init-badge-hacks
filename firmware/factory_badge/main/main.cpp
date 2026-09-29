@@ -496,7 +496,6 @@ extern "C" void app_main() {
     callbacks.unlock_after_dark = [] {
         if (afterDark.unlock(board::millis())) refreshModel();
     };
-    callbacks.morse_pressed = [](bool pressed) { board::setInputVibration(pressed); };
     badge::ui_init(board::display(), std::move(callbacks));
     refreshModel();
     line("CONFERENCE_READY"); status(nullptr);

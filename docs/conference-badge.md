@@ -67,12 +67,13 @@ replaces the small square target with the whole page and a prominent prompt:
 `tap the code to reveal a secret invitation`. Its navigation arrows retain their
 normal actions. The rest of the locked page accepts `init` in Morse:
 `.. / -. / .. / -` (two taps; hold then tap; two taps; hold). Use 200 ms taps,
-600 ms holds, 200 ms pauses within letters and 600 ms pauses between letters.
+600 ms holds as a comfortable starting point; pauses only affect displayed spacing.
 Each registered symbol appears as a dot or dash above the prompt; a recognized
 letter gap reserves the next letter's space, and a word gap is wider again. Only
 the entered symbols are shown, never decoded letters or the answer. The correct
 final hold reveals the invitation immediately on release, without a final pause.
-An incorrect or incomplete attempt ends after 2.5 seconds with no contact. Its
+An incorrect attempt ends after 2.5 seconds with no contact; a correct partial
+sequence waits indefinitely. Its
 visualization shakes for 220 ms and fades for 160 ms, then clears. The next press
 can interrupt this feedback immediately and starts a fresh attempt. Physical
 pushers retain their normal paging and setup behavior and cannot enter the code.
@@ -88,14 +89,11 @@ holds cannot toggle the QR. Model updates retain the current view. Re-entering
 an already unlocked page shows the poster without replaying the code-success
 sequence. Navigation destroys all page-owned animations and temporary QR state.
 
-The nominal timing follows [ITU-R M.1677-1 §2](https://www.itu.int/dms_pubrec/itu-r/rec/m/R-REC-M.1677-1-200910-I!!PDF-E.pdf):
-dot and internal gap one unit, dash and letter gap three units, word gap seven
-units. Here one unit is 200 ms. The standard defines transmitted timing; the
-receiver's human-input tolerances are our implementation choice. Dots are
-50–399 ms, dashes 400–1400 ms, internal gaps 50–399 ms, and letter pauses
-400–1399 ms. A 1400 ms gap separates words; `init` must be one word, so a word
-break inside it makes the attempt incorrect without advancing the 2.5-second
-retry deadline. The entire attempt must finish within 15 seconds.
+Recognition matches the seven symbols `..-...-` without checking pauses or
+letter boundaries. Holds shorter than 400ms are dots; all longer holds are dashes.
+There is no total-attempt deadline and a correct prefix does not time out.
+Displayed spaces still appear after 400ms and widen after 1400ms; these are purely
+visual and never invalidate the sequence. Short or long pauses are equally valid.
 Incorrect prefixes keep displaying later registered symbols and
 cannot accept a correct-looking suffix before the inactivity reset. Input is
 bounded to 32 ASCII symbols/spaces; overflow cannot unlock. Each release renews
@@ -109,17 +107,9 @@ These are monotonic timers, unaffected by phone/USB clock sync. USB `button`
 actions cannot enter Morse; simulated touch sequences exercise software behavior
 without proving physical sensor alignment.
 
-The vibration experiment uses a gentle buzz while the locked-page contact is
-held. Release, drag, lost contact, navigation, a modal, rotation or reveal stops
-it. A hold is capped at 1400 ms and cannot restart the motor until a fresh press.
-The view sends contact edges to main; the board adapter uses the existing
-M5IOE1 motor PWM at 5 kHz and 40% duty. Startup/idle use 0% duty. Board polling
-also stops on invalid/released contact and the hold deadline. This is a software
-bound, not an independent hardware cutoff; failed stop writes are retried.
-The driver verifies its register writes, which does not measure perceived
-vibration strength. Nothing is persisted for this experiment.
-USB status reports `vibration_available` and `vibration_active`; the latter is
-conservative and also stays true while an uncertain output awaits a checked OFF.
+Morse entry has no vibration and no pressed-background color change. Registered
+dots/dashes provide the contact feedback. The unused board motor safety adapter
+and its hardware diagnostics remain available, but this UI never activates it.
 
 The automatic reveal has a fixed date/time cutoff: **October 7, 2026 at 1:30 PM
 in the badge's configured local time**. Any valid clock reading at or after that
@@ -693,3 +683,11 @@ with profile, preferences and invitation unlock preserved. The holdout acceptanc
 threshold passed; a separate full-screen physical accuracy survey was not performed.
 Private evidence:
 `.build/touch-mapping/`.
+
+September 28 forgiving Morse update: recognition compares only the seven dot/dash
+symbols. Host tests cover all 128 seven-symbol patterns across all 64 short/long
+groupings, zero/short/long pauses, minute-long pauses, extended dashes, visible
+spaces, wrong-symbol retries, cancellation, bounds and clock wraparound. Native
+UI tests cover visibly spaced entry with deliberately wrong grouping and a pause
+longer than the old reset deadline, plus black pressed background and no haptic
+callbacks. Existing reveal animation/QR and modal regressions passed.

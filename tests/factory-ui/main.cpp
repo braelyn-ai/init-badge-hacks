@@ -355,47 +355,17 @@ int main(int argc, char** argv) {
         badge::ui_page(-1); spin();
     };
 
-    // Haptics track a held code contact without repeated writes on each tick.
-    assert(!vibrating && vibration_starts == vibration_stops);
+    // Morse entry keeps the background black and never invokes haptics.
     auto starts = vibration_starts;
     touch(234, 270, true, 10);
-    assert(vibrating && vibration_starts == starts + 1);
-    spin(10);
-    assert(vibrating && vibration_starts == starts + 1);
+    assert(!vibrating && vibration_starts == starts);
+    auto* surface = lv_obj_get_parent(invitation_prompt);
+    assert(lv_color_to_u32(lv_obj_get_style_bg_color(surface, LV_PART_MAIN)) == lv_color_to_u32(lv_color_black()));
     touch(234, 270, false, 10);
-    assert(!vibrating && vibration_starts == vibration_stops);
     restart_code_page();
-    // An overlong hold is bounded and cannot re-enable until a fresh contact.
-    touch(234, 270, true, 65);
-    assert(vibrating);
-    spin(10);
-    assert(!vibrating);
-    starts = vibration_starts;
-    spin(20);
-    assert(vibration_starts == starts);
+    touch(234, 270, true, 100);
+    assert(!vibrating && vibration_starts == starts);
     touch(234, 270, false);
-    restart_code_page();
-    // Opening a modal or a timed reveal during a press must stop the motor.
-    touch(234, 270, true);
-    assert(vibrating);
-    badge::ui_show_setup("init-test-badge", "example1234"); spin();
-    assert(!vibrating);
-    touch(234, 270, false);
-    badge::ui_close_setup(false); spin();
-    touch(234, 270, true);
-    assert(vibrating);
-    model.after_dark_unlocked = true;
-    badge::ui_update(model); spin();
-    assert(!vibrating);
-    touch(234, 270, false);
-    model.after_dark_unlocked = false;
-    badge::ui_update(model); spin();
-    touch(234, 270, true);
-    assert(vibrating);
-    lv_display_set_rotation(display, LV_DISPLAY_ROTATION_180); spin();
-    assert(!vibrating);
-    touch(234, 270, false);
-    lv_display_set_rotation(display, LV_DISPLAY_ROTATION_0); spin();
     restart_code_page();
 
     // Each completed contact draws the registered symbol immediately. A bad
@@ -535,7 +505,7 @@ int main(int argc, char** argv) {
     // Returning through a pusher while a finger stays down requires release:
     // the new page cannot count the tail of that contact as the first dot.
     touch(234, 270, true);
-    assert(vibrating);
+    assert(!vibrating);
     badge::ui_button(false, 1); spin();
     assert(!vibrating); // The old page's destructor shuts down feedback.
     badge::ui_button(false, -1); spin();
@@ -582,15 +552,15 @@ int main(int argc, char** argv) {
 
     // Every part of the page accepts code, including heading, empty background,
     // prompt and footer. Children and chrome decoration cannot swallow taps.
-    // Standard 200 ms symbols gaps and 600 ms letter gaps, across the page.
-    code_pulse(false, 10, 234, 100); code_pulse(false, 30, 234, 140); // i
-    code_pulse(true, 10, 100, 300); code_pulse(false, 30, 234, 270);  // n
+    // Deliberately wrong grouping, including a long pause, across the page.
+    code_pulse(false, 180, 234, 100); code_pulse(false, 3, 234, 140); // i
+    code_pulse(true, 40, 100, 300); code_pulse(false, 3, 234, 270);  // n
     code_pulse(false, 10, 234, 370); code_pulse(false, 30, 234, 432); // i
     // Decode once on the final dash release, without making a correct code
     // wait for either a letter pause or the failed-attempt idle deadline.
     touch(234, 270, true, 30);
     assert(after_dark_unlocks == 0);
-    assert(vibrating);
+    assert(!vibrating);
     touch(234, 270, false, 3);
     assert(!vibrating);
     assert(after_dark_unlocks == 1 && model.after_dark_unlocked);
