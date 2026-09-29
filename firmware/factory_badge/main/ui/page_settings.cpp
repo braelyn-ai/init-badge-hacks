@@ -9,8 +9,8 @@ class SettingsPage final : public PageView {
 public:
     SettingsPage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         menu_ = lv_menu_create(root_);
-        lv_obj_set_pos(menu_, 84, 62);
-        lv_obj_set_size(menu_, 300, 342);
+        lv_obj_set_pos(menu_, HeadingX, HeadingY);
+        lv_obj_set_size(menu_, HeadingWidth, ContentBottom - HeadingY);
         lv_obj_set_style_bg_color(menu_, lv_color_black(), 0);
         lv_obj_set_style_text_color(menu_, white(), 0);
         lv_obj_set_style_text_font(menu_, &font_sans_20, 0);
@@ -23,9 +23,20 @@ public:
         auto* header = lv_menu_get_main_header(menu_);
         lv_obj_set_style_bg_color(header, lv_color_black(), 0);
         lv_obj_set_style_text_font(header, &font_sans_24, 0);
-        lv_obj_set_style_pad_ver(header, 8, 0);
+        lv_obj_set_layout(header, LV_LAYOUT_NONE);
+        lv_obj_set_style_pad_all(header, 0, 0);
+        lv_obj_set_height(header, ContentTop - HeadingY);
+        auto* heading = lv_obj_get_child(header, 1);
+        set_font(heading, &font_sans_24);
+        lv_obj_set_pos(heading, 0, 0);
+        lv_obj_set_width(heading, HeadingWidth);
+        lv_obj_set_style_text_color(heading, cream(), 0);
+        lv_obj_set_style_text_align(heading, LV_TEXT_ALIGN_CENTER, 0);
+        lv_label_set_long_mode(heading, LV_LABEL_LONG_DOT);
         auto* back = lv_menu_get_main_header_back_button(menu_);
-        lv_obj_set_size(back, 44, 44);
+        lv_obj_set_size(back, 44, 36);
+        lv_obj_set_pos(back, 0, 0);
+        lv_obj_move_foreground(back);
         lv_obj_set_style_text_font(back, LV_FONT_DEFAULT, 0);
         lv_obj_set_style_text_color(back, white(), 0);
         // A label follows font/style changes reliably across native menu history.
@@ -120,7 +131,8 @@ private:
     lv_obj_t* page(const char* title) {
         auto* p = lv_menu_page_create(menu_, title);
         lv_obj_set_style_bg_color(p, lv_color_black(), 0);
-        lv_obj_set_style_pad_all(p, 8, 0);
+        lv_obj_set_style_pad_hor(p, 8, 0);
+        lv_obj_set_style_pad_ver(p, 0, 0);
         lv_obj_set_style_pad_row(p, 6, 0);
         lv_obj_set_scrollbar_mode(p, LV_SCROLLBAR_MODE_OFF);
         return p;

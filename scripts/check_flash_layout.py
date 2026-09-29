@@ -92,7 +92,8 @@ def discover_esptool(arduino_cli, fqbn, sketch):
 
 def discovered_ports(arduino_cli):
     result = subprocess.run([arduino_cli, "board", "list", "--format", "json"],
-                            capture_output=True, text=True, timeout=10)
+                            # Discovery can exceed 10s while the host is under build load.
+                            capture_output=True, text=True, timeout=60)
     if result.returncode:
         raise RuntimeError("USB discovery failed; upload blocked. Rediscover the device port")
     try:

@@ -6,7 +6,7 @@ namespace badge::ui {
 namespace {
 constexpr int RowWidth = 273;
 constexpr int ContentWidth = RowWidth - 32; // Fourteen-pixel padding plus the reserved border.
-constexpr int ListTop = 100;
+constexpr int ListTop = ContentTop;
 constexpr int ListHeight = 280;
 // RGB565 maps #161616 to (16,20,16). Use equal representable channel levels.
 constexpr uint32_t CardGray = 0x181818;
@@ -65,7 +65,7 @@ void draw_notches(lv_event_t* event) {
 class SchedulePage final : public PageView {
 public:
     SchedulePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        label(root_, "Schedule", 84, 52, 300, &font_sans_24, cream());
+        page_heading(root_, "Schedule");
         list_ = container(root_, 98, ListTop, RowWidth, ListHeight);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);

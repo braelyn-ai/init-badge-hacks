@@ -590,7 +590,7 @@ int main(int argc, char** argv) {
     auto* poster = find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art);
     lv_area_t poster_area;
     lv_obj_get_coords(poster, &poster_area);
-    assert(poster_area.x1 == 84 && poster_area.y1 == 83);
+    assert(poster_area.x1 == 84 && poster_area.y1 == 100);
     assert_invitation_qr(false);
     assert(find_label(lv_display_get_screen_active(display), "Tap for QR code"));
     snapshot("after-dark-revealed");
@@ -607,9 +607,9 @@ int main(int argc, char** argv) {
     tap(234, 240);
     assert_invitation_qr(false);
     assert(lv_obj_is_visible(poster));
-    tap(234, 402); // The caption is also a tap target.
+    tap(234, 417); // The caption is also a tap target.
     assert_invitation_qr(true);
-    tap(234, 402);
+    tap(234, 417);
     assert_invitation_qr(false);
 
     starts = vibration_starts;
@@ -715,6 +715,11 @@ int main(int argc, char** argv) {
             const char* titles[] = {"", "Schedule", "Party", "Badge", "Settings"};
             auto* heading = find_label(lv_screen_active(), titles[page]);
             assert(heading && lv_obj_is_visible(heading));
+            lv_area_t bounds; lv_obj_get_coords(heading, &bounds);
+            if (bounds.x1 != 84 || bounds.y1 != 52 || bounds.x2 != 383)
+                std::fprintf(stderr, "Heading %s bounds %d,%d..%d,%d\n", titles[page],bounds.x1,bounds.y1,bounds.x2,bounds.y2);
+            assert(bounds.x1 == 84 && bounds.y1 == 52 && bounds.x2 == 383);
+            assert(lv_obj_get_style_text_align(heading,LV_PART_MAIN)==LV_TEXT_ALIGN_CENTER);
         }
         assert(!find_label(lv_screen_active(), "Learn how"));
         snapshot("page" + std::to_string(page));
@@ -726,6 +731,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    auto* first_setting = action_label(lv_screen_active(), "Brightness");
+    assert(first_setting);
+    lv_area_t first_setting_bounds;
+    lv_obj_get_coords(lv_obj_get_parent(first_setting), &first_setting_bounds);
+    assert(first_setting_bounds.y1 == 100);
     tap_text("Brightness");
     snapshot("settings-brightness");
     auto* increase = active_label(lv_screen_active(), "Increase"); assert(increase);

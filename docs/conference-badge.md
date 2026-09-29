@@ -79,7 +79,7 @@ pushers retain their normal paging and setup behavior and cannot enter the code.
 On successful code entry, the front-page GIF backs the native words `You're`,
 `Invited`, `To` for about 700 ms each. After the final word, its decoder/timer is
 released and the supplied event artwork/QR viewport slides upward over 450 ms.
-The intact 300×300 artwork is centered at (234,233), clipped to 16px rounded
+The intact 300×300 artwork is centered horizontally with its top at y=100, clipped to 16px rounded
 corners, with `Tap for QR code` beneath it. A completed tap on artwork or caption
 replaces the poster with a centered 240×240 live-event QR and `Tap to return`.
 Another tap restores the poster. There is no vertical scrolling; drags and long
@@ -701,3 +701,18 @@ layout. The resized badge QR still decodes in the host frame. Guarded device
 flash passed UNIT_READY; USB navigation verified the five-page wrap and the
 Settings Hack QR, preserving calibration, profile flags and invitation unlock.
 Private screenshots/logs: `.build/page-titles/`.
+
+September 28 shared page layout: Schedule defines the heading at x=84, y=52,
+width=300 with centered 24px text, and the content top at y=100. Party and Badge
+use the same shared heading helper and content boundary. Settings keeps native
+menu navigation but reserves a fixed 48px header, centers the heading independently
+of its back button, and starts every submenu at y=100. Its content ends at y=404.
+Party's 300px poster occupies y=100–400 with its caption below; Badge's profile
+and expanded QR panels use y=100–404. Home and modal calibration/setup are separate.
+Validation: native UI tests assert identical primary heading bounds/alignment and
+Settings content starting at y=100; menu, QR and capture tests passed. Guarded
+flash passed UNIT_READY and device captures confirmed the new layout and Settings
+Hack QR. Calibration, profile flags and invitation unlock were preserved. USB
+discovery needed over ten seconds under host load; its timeout is now sixty
+seconds with all identity/partition checks retained (eight guard tests passed).
+Private evidence: `.build/fixed-layout/`.

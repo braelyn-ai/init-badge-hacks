@@ -7,6 +7,8 @@ namespace badge::ui {
 
 constexpr int Width = 468;
 constexpr int Height = 466;
+constexpr int HeadingX = 84, HeadingY = 52, HeadingWidth = 300;
+constexpr int ContentTop = 100, ContentBottom = 404;
 constexpr int PageCount = 5;
 constexpr int AfterDarkPage = 2;
 constexpr int SettingsPageIndex = 4;

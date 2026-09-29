@@ -13,29 +13,29 @@ public:
         lv_obj_set_style_bg_opa(root_, LV_OPA_COVER, 0);
         prompt_ = label(root_, "", 80, 216, 308, &font_sans_24, white());
         lv_label_set_long_mode(prompt_, LV_LABEL_LONG_WRAP);
-        input_display_ = container(root_, 66, 100, 336, 86);
+        input_display_ = container(root_, 66, ContentTop, 336, 86);
         lv_obj_remove_flag(input_display_, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_flex_flow(input_display_, LV_FLEX_FLOW_ROW_WRAP);
         lv_obj_set_flex_align(input_display_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_column(input_display_, 24, 0);
         lv_obj_set_style_pad_row(input_display_, 10, 0);
         set_hidden(input_display_, true);
-        invitation_ = container(root_, 74, 54, 320, 365);
+        invitation_ = container(root_, 74, ContentTop, 320, 326);
         lv_obj_set_style_bg_color(invitation_, lv_color_black(), 0);
         lv_obj_set_style_bg_opa(invitation_, LV_OPA_COVER, 0);
-        auto* artwork_frame = container(invitation_, 10, 29, 300, 300);
+        auto* artwork_frame = container(invitation_, 10, 0, 300, 300);
         lv_obj_set_style_radius(artwork_frame, 16, 0);
         lv_obj_set_style_clip_corner(artwork_frame, true, 0);
         lv_obj_remove_flag(artwork_frame, LV_OBJ_FLAG_CLICKABLE);
         artwork_ = lv_image_create(artwork_frame);
         lv_image_set_src(artwork_, &invitation_art);
-        lv_obj_set_pos(artwork_, 0, 0); // Artwork center is display (234,233).
+        lv_obj_set_pos(artwork_, 0, 0); // Poster starts at the shared content boundary.
         lv_obj_remove_flag(artwork_, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(artwork_, LV_OBJ_FLAG_GESTURE_BUBBLE);
-        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 40, 59, 240, 24);
+        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 40, 30, 240, 24);
         lv_obj_remove_flag(invitation_qr_, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_remove_flag(lv_obj_get_child(invitation_qr_, 0), LV_OBJ_FLAG_CLICKABLE);
-        qr_caption_ = label(invitation_, "Tap for QR code", 0, 340, 320, &font_mono_semibold_12, muted());
+        qr_caption_ = label(invitation_, "Tap for QR code", 0, 307, 320, &font_mono_semibold_12, muted());
         set_hidden(invitation_qr_, true);
         on_tap(invitation_, [this] {
             if (!context_.model.after_dark_unlocked || revealing()) return;
@@ -67,7 +67,7 @@ public:
                 lv_indev_get_state(input) == LV_INDEV_STATE_PRESSED)
                 lv_indev_wait_release(input);
         }
-        label(root_, "Party", 84, 52, 300, &font_sans_24, cream());
+        page_heading(root_, "Party");
         update();
     }
     ~InvitePage() override {

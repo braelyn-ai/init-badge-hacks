@@ -7,8 +7,8 @@ namespace badge::ui {
 class BadgePage final : public PageView {
 public:
     BadgePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        label(root_, "Badge", 84, 52, 300, &font_sans_24, cream());
-        list_ = container(root_, 72, 83, 324, CardHeight);
+        page_heading(root_, "Badge");
+        list_ = container(root_, 72, ContentTop, 324, CardHeight);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);
         lv_obj_set_scrollbar_mode(list_, LV_SCROLLBAR_MODE_OFF);
@@ -46,7 +46,7 @@ public:
         if (selected_ != model.selected_network) scroll_to_model();
     }
 private:
-    static constexpr int CardHeight = 320;
+    static constexpr int CardHeight = ContentBottom - ContentTop;
     void scroll_to_model() {
         selected_ = std::clamp(context_.model.selected_network, 0, 2);
         lv_obj_scroll_to_y(list_, selected_ * CardHeight, LV_ANIM_OFF);
@@ -106,14 +106,14 @@ private:
     void expand(int network) {
         if (expanded_) return;
         set_hidden(list_, true);
-        expanded_ = container(root_, 72, 92, 324, 322);
+        expanded_ = container(root_, 72, ContentTop, 324, CardHeight);
         lv_obj_set_style_bg_color(expanded_, lv_color_black(), 0);
         lv_obj_set_style_bg_opa(expanded_, LV_OPA_COVER, 0);
         label(expanded_, NetworkNames[network], 22, 6, 280, &font_sans_20);
         if (urls_[network].empty()) {
             label(expanded_, "No account yet", 22, 145, 280, &font_mono_18, muted());
             button(expanded_, "Tap to configure", 62, 216, 200, 44, [this] { request_setup(context_); });
-            button(expanded_, "Go back", 104, 286, 116, 40, [this] { collapse(); });
+            button(expanded_, "Go back", 104, 258, 116, 40, [this] { collapse(); });
         } else {
             qr(expanded_, urls_[network], 40, 35, 244);
             label(expanded_, "Tap to close", 22, 284, 280, &font_mono_12, muted());

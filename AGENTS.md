@@ -83,6 +83,9 @@
 - Party is always visible (internal After Dark page ID 2). Use five pages/dots:
   init() 0, Schedule 1, Party 2, Badge 3, Settings 4. All except init() have a
   visible title; Badge retains its title even with a configured profile or QR.
+  Use shared heading bounds (84,52,300) and content top 100, matching Schedule.
+  Settings has a fixed 48px native header with centered text and an independent
+  back button; menu history must not shift the heading or content downward.
   Its locked page hides the event name and says
   `tap the code to reveal a secret invitation`. Enter Morse
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation

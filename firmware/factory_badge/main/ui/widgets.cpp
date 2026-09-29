@@ -53,6 +53,10 @@ lv_obj_t* label(lv_obj_t* parent, const char* text, int x, int y, int width, con
     return object;
 }
 
+lv_obj_t* page_heading(lv_obj_t* parent, const char* title) {
+    return label(parent, title, HeadingX, HeadingY, HeadingWidth, &font_sans_24, cream());
+}
+
 lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, int height,
                  std::function<void()> action) {
     auto* object = lv_button_create(parent);

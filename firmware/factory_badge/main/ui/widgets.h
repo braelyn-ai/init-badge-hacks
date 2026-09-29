@@ -14,6 +14,7 @@ lv_obj_t* container(lv_obj_t* parent, int x, int y, int width, int height);
 void set_font(lv_obj_t* object, const lv_font_t* font);
 lv_obj_t* label(lv_obj_t* parent, const char* text, int x, int y, int width,
                 const lv_font_t* font = &font_sans_16, lv_color_t color = white());
+lv_obj_t* page_heading(lv_obj_t* parent, const char* title);
 lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, int height,
                  std::function<void()> action);
 // Release-only action with drag/hold cancellation, shared by buttons and QR cards.

@@ -79,8 +79,8 @@ def capture_pages(device, out):
                 circular.paste(invitation, mask=mask)
                 assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://luma.com/developers-after-dark"]
         if index == 4:
-            device.touch("begin", 234, 282); time.sleep(.1)
-            device.touch("end", 234, 282); time.sleep(.2)
+            device.touch("begin", 234, 266); time.sleep(.1)
+            device.touch("end", 234, 266); time.sleep(.2)
             picture = device.capture(out / "settings-hack.png")
             mask = Image.new("L", picture.size)
             ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
@@ -123,15 +123,15 @@ def main():
         time.sleep(.12)
         return device.status()
     def set_orientation(name):
-        device.page(0); device.page(4); tap(234, 188)
-        tap(234, {"Free": 152, "Default": 202, "180°": 252}[name])
+        device.page(0); device.page(4); tap(234, 170)
+        tap(234, {"Free": 122, "Default": 172, "180°": 222}[name])
         return wait_state(lambda s: s["orientation_mode"] == name and (name == "Free" or s["rotation"] == (0 if name == "Default" else 2)))
     def set_brightness(value):
-        device.page(0); device.page(4); tap(234, 138)
+        device.page(0); device.page(4); tap(234, 122)
         for _ in range(10):
             state = device.status()
             if state["brightness_percent"] == value: return
-            tap(234, 239 if state["brightness_percent"] < value else 189)
+            tap(234, 209 if state["brightness_percent"] < value else 159)
         raise AssertionError("Brightness did not reach target")
 
     try:
@@ -144,7 +144,7 @@ def main():
         report["animation"] = True
         device.page(4)
         before = device.status()
-        for x, y in ((234, 138), (234, 186), (234, 234), (234, 330), (234, 378)):
+        for x, y in ((234, 122), (234, 186), (234, 234), (234, 330), (234, 378)):
             device.touch("begin", x, y)
             device.touch("move", x, y - 70)
             device.touch("move", x, y)
@@ -155,7 +155,7 @@ def main():
         report["drag_rejection"] = True
         # Opening/cancelling Reset must be safe on a personalized device. Never
         # tap the destructive confirmation here; successful erasure uses fixtures.
-        device.page(0); device.page(4); tap(234, 388)
+        device.page(0); device.page(4); tap(234, 362)
         assert device.status()["reset_active"]
         device.capture(out / "reset-confirmation.png")
         device.action({"op": "button", "value": "blue"})
@@ -169,7 +169,7 @@ def main():
         set_brightness(original["brightness_percent"])
         for name, rotation in (("Default", 0), ("180°", 2)):
             set_orientation(name); settle()
-            tap(234, 352)
+            tap(234, 322)
             device.send({"op": "touch_test_status"})
             state = json.loads(device.response(b"TOUCH_TEST_STATUS "))
             assert state["active"] and state["rotation"] == rotation
@@ -182,7 +182,7 @@ def main():
             device.action({"op": "button", "value": "blue"})
         report["settings_and_simulated_rotated_touch"] = True
         set_orientation(original["orientation_mode"]); settle()
-        device.page(0); device.page(4); tap(234, 338); tap(234, 203)
+        device.page(0); device.page(4); tap(234, 314); tap(234, 173)
         active = wait_state(lambda s: s["setup"] and s["wifi_mode"] == 2)
         report["ap_started"] = active["wifi_mode"] == 2
         device.send({"op": "capture_badge"})
@@ -198,7 +198,7 @@ def main():
         for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "name_present", "company_present", "store_ready", "schedule_bookmarks"):
             assert restored[key] == original[key], key
         report["restart_restoration"] = True
-        device.page(4); tap(234, 188); tap(234, 352)
+        device.page(4); tap(234, 170); tap(234, 322)
         device.send({"op": "touch_test_status"})
         report["final_touch_test"] = json.loads(device.response(b"TOUCH_TEST_STATUS "))
         assert report["final_touch_test"]["active"]
