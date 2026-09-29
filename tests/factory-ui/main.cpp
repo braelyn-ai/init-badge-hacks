@@ -1126,6 +1126,20 @@ int main(int argc, char** argv) {
     assert(!find_label(lv_display_get_screen_active(display), "Tap to close"));
     assert(find_label(lv_display_get_screen_active(display), "Example company"));
 
+    // Calibration is modal, freezes paging, uses raw physical samples elsewhere,
+    // and physical exit cancels without changing preferences.
+    model.calibration_target_visible = true;
+    model.calibration_x = 234; model.calibration_y = 63;
+    model.calibration_title = "Calibrate 1 / 9";
+    model.calibration_message = "Hold the target, then lift";
+    badge::ui_update(model); badge::ui_show_calibration(); spin();
+    assert(badge::ui_calibration_active() && badge::ui_touch_test_active());
+    assert(find_label(lv_screen_active(), "Calibrate 1 / 9"));
+    assert(lit_pixels(217,46,251,80)>30);
+    snapshot("touch-calibration");
+    badge::ui_page(1); assert(badge::ui_page_index()==5);
+    badge::ui_button(false,1); spin();
+    assert(!badge::ui_calibration_active() && !badge::ui_touch_test_active());
     mooncake::GetMooncake().uninstallAllApps();
     lv_indev_delete(input);
     lv_display_delete(display);

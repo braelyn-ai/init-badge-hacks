@@ -117,7 +117,12 @@
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.
   Never apply calibration, save touch data, or start networking from this test.
-  Native CST820 coordinates feed LVGL directly; LVGL owns touch rotation.
+  Settings → Orientation → Calibrate touch is a separate measurement wizard.
+  It collects real raw contacts at nine fit and five holdout targets in rotation 0,
+  saves an ESPtember-compatible affine map only after validation, and preserves
+  the prior map on cancellation. The board loads validated espt-touch/record v1/v2
+  records and applies their full mapping before LVGL owns touch rotation.
+  Never calibrate from USB-injected contacts or compile per-device coefficients.
   The factory board adapter translates M5 rotation numbering once and keeps
   its 468×466 native display geometry. Do not reintroduce the retired Arduino
   scale/offset trial. See hardware.md for its historical fit limitations.

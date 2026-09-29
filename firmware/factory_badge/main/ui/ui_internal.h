@@ -26,6 +26,7 @@ struct Context {
     int setup_origin = 0;
     bool setup = false;
     bool touch_test = false;
+    bool calibration = false;
     bool reset = false;
     bool reset_confirmed = false;
     bool rebuild = false;
@@ -54,6 +55,7 @@ std::unique_ptr<PageView> make_badge(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_hack(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_settings(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_setup(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_calibration(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_touch_test(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_reset(Context&, lv_obj_t*);
 

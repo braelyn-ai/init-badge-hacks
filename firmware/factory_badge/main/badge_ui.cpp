@@ -73,6 +73,7 @@ public:
         if (context.rebuild) {
             page_.reset();
             if (context.setup) page_ = ui::make_setup(context, page_host_);
+            else if (context.calibration) page_ = ui::make_calibration(context, page_host_);
             else if (context.touch_test) page_ = ui::make_touch_test(context, page_host_);
             else if (context.reset) page_ = ui::make_reset(context, page_host_);
             else {
@@ -189,9 +190,16 @@ void ui_show_touch_test() {
     context.touch.rotation = context.rotation;
     context.rebuild = true;
 }
+void ui_show_calibration() {
+    ui_show_touch_test();
+    if (context.touch_test) { context.calibration = true; context.rebuild = true; }
+}
+bool ui_calibration_active() { return context.calibration; }
 void ui_close_touch_test() {
     if (!context.touch_test) return;
     context.touch_test = false;
+    if (context.calibration && context.callbacks.cancel_calibration) context.callbacks.cancel_calibration();
+    context.calibration = false;
     context.page = 5;
     context.rebuild = true;
 }

@@ -5,6 +5,8 @@
 #include "board.h"
 #include "board_rotation.h"
 #include "board_touch.h"
+#include "touch_mapping.h"
+#include <cmath>
 #include "board_flush.h"
 #include "board_vibration.h"
 #include "vendor/cst820/cst820.h"
@@ -194,11 +196,16 @@ void flush(lv_display_t* display, const lv_area_t* area, uint8_t* pixels) {
     lv_display_flush_ready(display);
 }
 
+lv_point_t nativeTouchPoint() {
+    auto p = touchSample.sensor ? touch_mapping::map({double(touchSample.rawX), double(touchSample.rawY)})
+                               : touchcal::Point{double(touchSample.rawX), double(touchSample.rawY)};
+    return {int32_t(std::lround(std::clamp(p.x, 0.0, double(NativeWidth - 1)))),
+            int32_t(std::lround(std::clamp(p.y, 0.0, double(NativeHeight - 1))))};
+}
 void readPointer(lv_indev_t*, lv_indev_data_t* data) {
     data->state = touchSample.valid && touchSample.pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
     // lv_indev.c calls lv_display_rotate_point itself. Never pass x/y here.
-    data->point.x = touchSample.rawX;
-    data->point.y = touchSample.rawY;
+    data->point = nativeTouchPoint();
     data->continue_reading = false;
     if (injectedReleasePending) {
         injectedReleasePending = false;
@@ -234,7 +241,7 @@ bool initLvgl() {
 }
 
 void rotateObservation() {
-    lv_point_t point{touchSample.rawX, touchSample.rawY};
+    lv_point_t point = nativeTouchPoint();
     lv_display_rotate_point(lvDisplay, &point);
     touchSample.x = point.x;
     touchSample.y = point.y;
@@ -321,6 +328,7 @@ bool init() {
         ESP_LOGE(Tag, "touch initialization failed");
         return false;
     }
+    touch_mapping::load();
     if (!initLvgl()) { ESP_LOGE(Tag, "LVGL initialization failed"); return false; }
     bmi270_bmm150_config_t imuConfig{};
     imuConfig.i2c_addr = 0x68;

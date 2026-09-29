@@ -143,3 +143,10 @@ position product. Native roller rendering is exercised under the UI sanitizers.
 Settings explicitly invalidates its viewport on native menu changes because
 hidden-page reparenting could leave QR/header regions missing during partial
 flushes. The host test compares the settled menu frame to a full repaint.
+
+Touch mapping: `touch_mapping.cpp` loads validated ESPtember NVS records, and
+`board.cpp` applies them before LVGL rotation while retaining true raw diagnostic
+coordinates. `touch_mapping_session.cpp` accepts physical contacts only; main
+owns sampling and checked persistence. Views only draw target/status state.
+The calibration modal freezes rotation at 0 without changing saved orientation.
+The compact wizard writes v1 affine records; it also loads full existing v2 maps.

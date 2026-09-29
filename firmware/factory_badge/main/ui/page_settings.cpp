@@ -49,6 +49,7 @@ public:
             if (context_.callbacks.orientation) context_.callbacks.orientation(context_.model.orientation);
             update();
         });
+        row(rotation, "Calibrate touch", [this] { if (context_.callbacks.calibrate_touch) context_.callbacks.calibrate_touch(); });
         row(rotation, "Touch test", [] { ui_show_touch_test(); });
         clock_page_ = page("Date / time");
         date_ = text(clock_page_, "", &font_sans_16);

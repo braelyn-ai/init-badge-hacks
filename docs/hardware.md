@@ -2,7 +2,7 @@
 
 > **Factory-stack migration, September 17, 2026:** active code is now
 > `firmware/factory_badge/`. Its factory CO5300 framebuffer is **468×466** and
-> CST820 readings feed LVGL directly, with rotation applied once. The Arduino
+> CST820 readings pass through any validated ESPtember map before LVGL, with rotation applied once. The Arduino
 > 468×468 geometry and scale/offset experiments below are historical; do not
 > transfer those corrections to the new board adapter. See
 > [factory-stack.md](factory-stack.md) for current integration and verification.
@@ -480,8 +480,12 @@ measurements, and validation limits.
 ESPtember Day 07 (`days/day-07-touch-calibration/SPEC.md` in
 `chantastic/esptember`) specifies a device-measured affine transform plus local
 warp, stored as `espt-touch/record` with CRC, geometry and rotation validation.
-Day 08 consumes that record before delivering coordinates to LVGL. This badge
-still uses the factory native CST820 path; it does not load that record. A full
+Day 08 consumes that record before delivering coordinates to LVGL. This badge now loads both record versions and applies the map to raw CST820
+coordinates before LVGL rotation. Settings → Orientation → Calibrate touch runs
+a compact nine-target affine fit plus five independent verification targets,
+saving a compatible v1 record after success. It is not the complete Day 07
+perimeter/local-warp collection exercise. Existing v2 maps retain their complete
+local warp until the user successfully recalibrates. A full
 flash erase removes NVS calibration. Do not copy another device's coefficients
 or add offsets without implementing and physically verifying the calibration
 workflow against this native board adapter.

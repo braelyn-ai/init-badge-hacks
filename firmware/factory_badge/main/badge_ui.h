@@ -14,6 +14,10 @@ enum class ResetState : uint8_t { Ready, Working, Failed, SettingsFailed, Comple
 // The main task owns this model and all UI calls. Avatar memory must remain valid
 // until the next ui_update(), including while LVGL renders the current frame.
 struct UiModel {
+    bool touch_calibrated = false;
+    bool calibration_target_visible = false;
+    int calibration_x = 234, calibration_y = 233;
+    std::string calibration_title, calibration_message;
     std::string name;
     std::string company;
     std::array<std::string, 3> socials;
@@ -39,6 +43,8 @@ struct UiModel {
 };
 
 struct UiCallbacks {
+    std::function<void()> calibrate_touch;
+    std::function<void()> cancel_calibration;
     std::function<void()> request_setup;
     std::function<void()> close_setup;
     std::function<bool(int64_t, int)> set_clock; // Main-task RTC/NVS write; true only on readback success.
@@ -73,6 +79,8 @@ void ui_show_setup(const std::string& ssid, const std::string& password,
                    const std::string& ip = "192.168.4.1", const std::string& status = "");
 void ui_close_setup(bool saved);
 void ui_show_touch_test();
+void ui_show_calibration();
+bool ui_calibration_active();
 void ui_close_touch_test();
 void ui_show_reset();
 void ui_close_reset();

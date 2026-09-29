@@ -10,7 +10,7 @@ class TouchView final : public PageView {
 public:
     TouchView(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         label(root_, "Touch test", 64, 42, 340, &font_sans_24);
-        label(root_, "Factory sensor / LVGL coordinates", 54, 76, 360, &font_sans_14, muted());
+        label(root_, context.model.touch_calibrated ? "Calibrated / LVGL coordinates" : "Factory sensor / LVGL coordinates", 54, 76, 360, &font_sans_14, muted());
         constexpr int points[][2] = {{234, 120}, {234, 234}, {234, 362}, {112, 234}, {356, 234}};
         for (const auto& point : points) {
             auto* ring = container(root_, point[0] - 14, point[1] - 14, 28, 28);

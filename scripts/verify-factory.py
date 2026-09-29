@@ -170,14 +170,14 @@ def main():
         set_brightness(original["brightness_percent"])
         for name, rotation in (("Default", 0), ("180°", 2)):
             set_orientation(name); settle()
-            tap(234, 302)
+            tap(234, 352)
             device.send({"op": "touch_test_status"})
             state = json.loads(device.response(b"TOUCH_TEST_STATUS "))
             assert state["active"] and state["rotation"] == rotation
             tap(234, 234)
             device.send({"op": "touch_test_status"})
             state = json.loads(device.response(b"TOUCH_TEST_STATUS "))
-            assert state["touch_model"] == "factory-native" and (state["x"], state["y"]) == (234, 234)
+            assert state["touch_model"] in ("factory-native", "esptember-calibrated") and (state["x"], state["y"]) == (234, 234)
             assert not state["sensor"], "Idle polling relabeled a simulated point as physical"
             device.capture(out / f"touch-{rotation}.png")
             device.action({"op": "button", "value": "blue"})
@@ -199,7 +199,7 @@ def main():
         for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "name_present", "company_present", "store_ready", "schedule_bookmarks"):
             assert restored[key] == original[key], key
         report["restart_restoration"] = True
-        device.page(5); tap(234, 188); tap(234, 302)
+        device.page(5); tap(234, 188); tap(234, 352)
         device.send({"op": "touch_test_status"})
         report["final_touch_test"] = json.loads(device.response(b"TOUCH_TEST_STATUS "))
         assert report["final_touch_test"]["active"]

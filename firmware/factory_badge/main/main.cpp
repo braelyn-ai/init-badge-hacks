@@ -1,4 +1,5 @@
 #include "board.h"
+#include "touch_mapping.h"
 #include "badge_ui.h"
 #include "clock_service.h"
 #include "services.h"
@@ -75,7 +76,17 @@ void applyButton(BadgeButtonAction action) {
     if (board::rotation() == 2) delta = -delta;
     badge::ui_button(both, delta);
 }
+touch_mapping::Session calibration;
+bool calibrationRequested = false;
+uint32_t calibrationSequence = 0;
 void refreshModel() {
+    model.touch_calibrated = touch_mapping::available();
+    const auto stage = calibration.stage();
+    model.calibration_target_visible = stage == touch_mapping::Session::Stage::Fit || stage == touch_mapping::Session::Stage::Verify;
+    auto target = calibration.target();
+    model.calibration_x = int(target.x); model.calibration_y = int(target.y);
+    model.calibration_title = stage == touch_mapping::Session::Stage::Fit ? "Calibrate " + std::to_string(calibration.index()+1) + " / 9" : stage == touch_mapping::Session::Stage::Verify ? "Check " + std::to_string(calibration.index()+1) + " / 5" : "Touch calibration";
+    model.calibration_message = calibration.message();
     auto previousAvatar = profile.avatar; // Keep previous image alive through widget update.
     profile = badge::profile_snapshot();
     model.name = profile.profile.name;
@@ -132,6 +143,10 @@ void status(const char* nonce) {
     data["name_present"] = !saved.profile.name.empty(); data["store_ready"] = saved.ready;
     data["setup"] = setupRequested || portal.active || portal.starting;
     data["wifi_mode"] = int(wifi); data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
+    data["touch_calibration_version"] = touch_mapping::version();
+    data["calibration_active"] = badge::ui_calibration_active();
+    data["calibration_message"] = calibration.message();
+    data["calibration_step"] = calibration.index();
     data["clock_valid"] = badge_clock::valid(); data["rtc"] = board::rtcAvailable();
     data["flash_bytes"] = flashSize; data["psram_bytes"] = esp_psram_get_size();
     data["board"] = 30; data["display_width"] = board::width(); data["display_height"] = board::height();
@@ -149,7 +164,8 @@ void touchStatus(const char* nonce) {
     data["x"] = touch.x; data["y"] = touch.y;
     data["raw_x"] = touch.raw_x; data["raw_y"] = touch.raw_y;
     data["rotation"] = board::rotation(); data["scale_trial"] = false;
-    data["touch_model"] = "factory-native";
+    data["touch_model"] = touch_mapping::available() ? "esptember-calibrated" : "factory-native";
+    data["calibration_version"] = touch_mapping::version();
     if (badge_clock::validNonce(nonce)) data["nonce"] = nonce;
     reply("TOUCH_TEST_STATUS ", data);
 }
@@ -234,6 +250,10 @@ void command(JsonDocument& data) {
     if (!strcmp(op, "clock_set") || !strcmp(op, "clock_status")) clockCommand(data);
     else if (!strcmp(op, "status")) { if (data["reset_metrics"] | false) maxLoopGap = 0; status(nonce); }
     else if (!strcmp(op, "touch_test_status")) touchStatus(nonce);
+    else if (!strcmp(op, "calibrate_touch")) {
+        if (!badge_clock::validNonce(nonce) || setupRequested || badge::ui_setup_active() || badge::ui_touch_test_active() || badge::ui_reset_active()) { line("COMMAND_REJECTED"); return; }
+        calibrationRequested = true; status(nonce);
+    }
     else if (!strcmp(op, "observe_taps")) observeTaps(data);
     else if (!strcmp(op, "page") && data["step"].is<int>() && abs(data["step"].as<int>()) == 1) {
         badge::ui_page(data["step"].as<int>()); status(nonce);
@@ -446,6 +466,8 @@ extern "C" void app_main() {
     badge_clock::init();
     badge::services_init(badge_clock::setFromPhone);
     badge::UiCallbacks callbacks;
+    callbacks.calibrate_touch = [] { calibrationRequested = true; };
+    callbacks.cancel_calibration = [] { calibration.cancel(); calibrationRequested = false; };
     callbacks.request_setup = []{ startSetup(); };
     callbacks.close_setup = closeSetup;
     callbacks.set_clock = [](int64_t epoch, int offset) {
@@ -486,6 +508,19 @@ extern "C" void app_main() {
         auto keys = board::buttons();
         applyButton(buttons.update(keys.yellow, keys.blue, now));
         auto contact = board::touch();
+        if (calibrationRequested && !contact.pressed && board::setRotation(0)) {
+            calibrationRequested = false; calibration.begin(); calibrationSequence = contact.sequence;
+            badge::ui_show_calibration(); refreshModel();
+        }
+        if (badge::ui_calibration_active() && contact.sequence != calibrationSequence) {
+            calibrationSequence = contact.sequence;
+            calibration.sample(contact.valid, contact.sensor, contact.pressed, contact.rawX, contact.rawY, contact.sampledAtMs);
+            if (calibration.stage() == touch_mapping::Session::Stage::Ready) {
+                calibration.saved(touch_mapping::save(calibration.affine()));
+                lv_indev_reset(board::pointer(), nullptr);
+            }
+            refreshModel();
+        }
         touchObservation.active(board::millis());
         if (contact.sequence != observedTouchSequence) {
             observedTouchSequence = contact.sequence;

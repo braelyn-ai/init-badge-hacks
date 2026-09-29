@@ -17,7 +17,7 @@ struct TouchSample {
     bool pressed = false;
     bool sensor = true;      // False only for explicit USB-injected input.
     int16_t rawX = 0, rawY = 0;
-    int16_t x = 0, y = 0;    // Same rotation LVGL applies to the raw sample.
+    int16_t x = 0, y = 0;    // Calibrated display coordinates, with LVGL rotation applied once.
     uint32_t sequence = 0;
     uint32_t sampledAtMs = 0;
 };

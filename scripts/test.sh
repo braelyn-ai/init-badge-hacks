@@ -54,3 +54,5 @@ python3 "$REPO_ROOT/tests/factory-clock/run.py"
 bash "$REPO_ROOT/tests/factory-ui/run.sh"
 
 bash "$REPO_ROOT/tests/factory-intro/run.sh"
+
+bash "$REPO_ROOT/tests/touch-mapping/run.sh"
