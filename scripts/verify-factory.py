@@ -88,7 +88,7 @@ def capture_pages(device, out):
             ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
             circular = Image.new("RGB", picture.size)
             circular.paste(picture, mask=mask)
-            assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://drop.workos.cloud/stopwatch"]
+            assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://workos.com/init/badge"]
     return captured, skipped
 
 def main():
@@ -124,13 +124,15 @@ def main():
         time.sleep(.12)
         return device.status()
     def set_orientation(name):
-        tap({"Free": 215, "Default": 284, "180°": 352}[name], 238)
+        device.page(4); device.page(5); tap(234, 188)
+        tap(234, {"Free": 152, "Default": 202, "180°": 252}[name])
         return wait_state(lambda s: s["orientation_mode"] == name and (name == "Free" or s["rotation"] == (0 if name == "Default" else 2)))
     def set_brightness(value):
+        device.page(4); device.page(5); tap(234, 138)
         for _ in range(10):
             state = device.status()
             if state["brightness_percent"] == value: return
-            tap(349 if state["brightness_percent"] < value else 217, 166)
+            tap(234, 239 if state["brightness_percent"] < value else 189)
         raise AssertionError("Brightness did not reach target")
 
     try:
@@ -143,7 +145,7 @@ def main():
         report["animation"] = True
         device.page(5)
         before = device.status()
-        for x, y in ((349, 166), (234, 361), (168, 404), (300, 404), (352, 238)):
+        for x, y in ((234, 138), (234, 186), (234, 234), (234, 330), (234, 378)):
             device.touch("begin", x, y)
             device.touch("move", x, y - 70)
             device.touch("move", x, y)
@@ -154,7 +156,7 @@ def main():
         report["drag_rejection"] = True
         # Opening/cancelling Reset must be safe on a personalized device. Never
         # tap the destructive confirmation here; successful erasure uses fixtures.
-        tap(300, 404)
+        device.page(4); device.page(5); tap(234, 388)
         assert device.status()["reset_active"]
         device.capture(out / "reset-confirmation.png")
         device.action({"op": "button", "value": "blue"})
@@ -168,7 +170,7 @@ def main():
         set_brightness(original["brightness_percent"])
         for name, rotation in (("Default", 0), ("180°", 2)):
             set_orientation(name); settle()
-            tap(168, 404)
+            tap(234, 302)
             device.send({"op": "touch_test_status"})
             state = json.loads(device.response(b"TOUCH_TEST_STATUS "))
             assert state["active"] and state["rotation"] == rotation
@@ -181,7 +183,7 @@ def main():
             device.action({"op": "button", "value": "blue"})
         report["settings_and_simulated_rotated_touch"] = True
         set_orientation(original["orientation_mode"]); settle()
-        tap(234, 361)
+        device.page(4); device.page(5); tap(234, 338); tap(234, 203)
         active = wait_state(lambda s: s["setup"] and s["wifi_mode"] == 2)
         report["ap_started"] = active["wifi_mode"] == 2
         device.send({"op": "capture_badge"})
@@ -197,7 +199,7 @@ def main():
         for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "name_present", "company_present", "store_ready", "schedule_bookmarks"):
             assert restored[key] == original[key], key
         report["restart_restoration"] = True
-        device.page(5); tap(168, 404)
+        device.page(5); tap(234, 188); tap(234, 302)
         device.send({"op": "touch_test_status"})
         report["final_touch_test"] = json.loads(device.response(b"TOUCH_TEST_STATUS "))
         assert report["final_touch_test"]["active"]

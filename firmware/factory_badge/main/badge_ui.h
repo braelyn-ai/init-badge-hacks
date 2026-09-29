@@ -23,6 +23,8 @@ struct UiModel {
     uint16_t avatar_width = 0;
     uint16_t avatar_height = 0;
     uint32_t profile_revision = 0;
+    int64_t clock_epoch = 0;
+    int utc_offset_minutes = 0;
     int battery_percent = -1;
     int brightness_percent = 60;
     Orientation orientation = Orientation::Default;
@@ -39,6 +41,7 @@ struct UiModel {
 struct UiCallbacks {
     std::function<void()> request_setup;
     std::function<void()> close_setup;
+    std::function<bool(int64_t, int)> set_clock; // Main-task RTC/NVS write; true only on readback success.
     std::function<void(int)> brightness; // Absolute percentage, 10 through 100.
     std::function<void(Orientation)> orientation;
     std::function<void(int)> network;

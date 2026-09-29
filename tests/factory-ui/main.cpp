@@ -105,6 +105,42 @@ lv_obj_t* find_label(lv_obj_t* object, const char* text) {
     }
     return nullptr;
 }
+bool hidden_ancestor(lv_obj_t* obj) {
+    for (; obj; obj = lv_obj_get_parent(obj)) if (lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) return true;
+    return false;
+}
+lv_obj_t* active_label(lv_obj_t* obj, const char* text) {
+    if (lv_obj_check_type(obj, &lv_label_class) && !std::strcmp(lv_label_get_text(obj), text) && !hidden_ancestor(obj)) return obj;
+    for (unsigned i = 0; i < lv_obj_get_child_count(obj); ++i)
+        if (auto* result = active_label(lv_obj_get_child(obj, i), text)) return result;
+    return nullptr;
+}
+lv_obj_t* action_label(lv_obj_t* obj, const char* text) {
+    if (lv_obj_check_type(obj, &lv_label_class) && !std::strcmp(lv_label_get_text(obj), text) &&
+        !hidden_ancestor(obj) && lv_obj_check_type(lv_obj_get_parent(obj), &lv_button_class)) return obj;
+    for (unsigned i = 0; i < lv_obj_get_child_count(obj); ++i)
+        if (auto* result = action_label(lv_obj_get_child(obj, i), text)) return result;
+    return nullptr;
+}
+void tap_text(const char* text) {
+    auto* obj = action_label(lv_screen_active(), text);
+    assert(obj);
+    lv_obj_scroll_to_view_recursive(obj, LV_ANIM_OFF); spin();
+    lv_area_t box; lv_obj_get_coords(obj, &box);
+    tap((box.x1 + box.x2) / 2, (box.y1 + box.y2) / 2);
+}
+lv_obj_t* widget(lv_obj_t* obj, const lv_obj_class_t* type) {
+    if (lv_obj_check_type(obj, type)) return obj;
+    for (unsigned i = 0; i < lv_obj_get_child_count(obj); ++i)
+        if (auto* result = widget(lv_obj_get_child(obj, i), type)) return result;
+    return nullptr;
+}
+void menu_back() {
+    auto* menu = widget(lv_screen_active(), &lv_menu_class); assert(menu);
+    auto* back = lv_menu_get_main_header_back_button(menu);
+    lv_area_t box; lv_obj_get_coords(back, &box);
+    tap((box.x1 + box.x2) / 2, (box.y1 + box.y2) / 2);
+}
 lv_obj_t* find_image(lv_obj_t* object, const lv_image_dsc_t* source) {
     if (lv_obj_check_type(object, &lv_image_class) && lv_image_get_src(object) == source) return object;
     for (unsigned i = 0; i < lv_obj_get_child_count(object); ++i) {
@@ -234,10 +270,12 @@ int main(int argc, char** argv) {
 
     int brightness = 0, orientation = -1, network = -1, setup = 0;
     int bookmarked = -1, resets = 0, after_dark_unlocks = 0;
+    int clock_saves = 0; int64_t saved_epoch = 0; int saved_offset = 0; bool clock_save_ok = true;
     bool vibrating = false;
     unsigned vibration_starts = 0, vibration_stops = 0;
     badge::UiModel model;
     badge::UiCallbacks callbacks;
+    callbacks.set_clock = [&](int64_t epoch, int offset) { ++clock_saves; saved_epoch = epoch; saved_offset = offset; return clock_save_ok; };
     callbacks.brightness = [&](int value) { brightness = value; };
     callbacks.orientation = [&](badge::Orientation value) { orientation = int(value); };
     callbacks.bookmark = [&](int index) { bookmarked = index; };
@@ -259,6 +297,8 @@ int main(int argc, char** argv) {
     badge::ui_init(display, callbacks);
     model.clock_text = "12:34 PM";
     model.date_text = "2026-09-17 12:34 PM";
+    model.clock_epoch = 1789648440;
+    model.utc_offset_minutes = 0;
     model.clock_valid = true;
     model.battery_percent = 74;
     badge::ui_update(model);
@@ -709,31 +749,58 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Native SHORT_CLICKED alone accepts a drag that returns to the button.
-    // The shared tap binding must cancel the entire gesture once it moves/loses focus.
-    touch(342, 177, true);
-    touch(342, 110, true);
-    touch(342, 177, true);
-    touch(342, 177, false, 6);
+    tap_text("Brightness");
+    snapshot("settings-brightness");
+    auto* increase = active_label(lv_screen_active(), "Increase"); assert(increase);
+    lv_area_t inc; lv_obj_get_coords(increase, &inc);
+    int ix = (inc.x1 + inc.x2) / 2, iy = (inc.y1 + inc.y2) / 2;
+    touch(ix, iy, true); touch(ix + 30, iy, true); touch(ix, iy, false);
     assert(brightness == 0);
-    // A shorter excursion stays inside the button but is still a drag.
-    touch(330, 177, true);
-    touch(354, 177, true);
-    touch(330, 177, false, 6);
+    touch(ix, iy, true, 40); touch(ix, iy, false);
     assert(brightness == 0);
-    touch(342, 177, true, 40);
-    touch(342, 177, false, 6);
-    assert(brightness == 0);
-    tap(342, 177);
-    assert(brightness == 70);
-    tap(350, 238);
-    assert(orientation == 2);
-
-    auto* shown_date = find_label(lv_display_get_screen_active(display), "2026-09-17 | 12:34 PM");
-    assert(shown_date);
-    assert_inside(shown_date, lv_obj_get_parent(shown_date));
-    // Reset is a separate confirmation, never a Settings-row side effect.
-    tap(300, 404);
+    tap_text("Increase"); assert(brightness == 70);
+    menu_back(); tap_text("Orientation"); tap_text("180°"); assert(orientation == 2);
+    snapshot("settings-orientation");
+    menu_back(); tap_text("Date / time");
+    assert(clock_saves == 0);
+    snapshot("settings-date-time");
+    tap_text("Date"); assert(widget(lv_screen_active(), &lv_calendar_class));
+    auto* calendar = widget(lv_screen_active(), &lv_calendar_class);
+    auto* year_dropdown = widget(calendar, &lv_dropdown_class);
+    assert(year_dropdown && lv_dropdown_get_option_count(year_dropdown) == 76);
+    snapshot("settings-calendar"); menu_back();
+    tap_text("Time"); snapshot("settings-time"); menu_back();
+    assert(clock_saves == 0);
+    tap_text("Save date / time");
+    assert(clock_saves == 1 && saved_epoch == model.clock_epoch && saved_offset == 0);
+    assert(active_label(lv_screen_active(), "Date / time saved"));
+    clock_save_ok = false; tap_text("Save date / time");
+    assert(active_label(lv_screen_active(), "Could not save. Try again."));
+    menu_back();
+    // Saving leap-day local midnight with a negative offset crosses UTC correctly.
+    clock_save_ok = true;
+    model.clock_epoch = 1709193600; model.utc_offset_minutes = -480;
+    badge::ui_update(model); spin();
+    tap_text("Date / time");
+    const int saves_before_draft = clock_saves;
+    tap_text("UTC offset"); tap_text("Later (+15 min)"); menu_back();
+    assert(clock_saves == saves_before_draft);
+    tap_text("Save date / time");
+    assert(saved_epoch == model.clock_epoch - 900 && saved_offset == -465);
+    menu_back();
+    // A draft abandoned by leaving Settings never reaches the RTC callback.
+    tap_text("Date / time"); tap_text("UTC offset"); tap_text("Earlier (-15 min)");
+    const int saves_before_exit = clock_saves;
+    badge::ui_page(-1); badge::ui_page(1); spin();
+    assert(clock_saves == saves_before_exit);
+    tap_text("Hack this device");
+    spin();
+    assert(lit_pixels(120, 132, 348, 360) > 10000);
+    const auto menu_frame = pixels;
+    lv_obj_invalidate(lv_screen_active()); spin();
+    assert(pixels == menu_frame);
+    snapshot("settings-hack"); menu_back();
+    tap_text("Reset");
     assert(badge::ui_reset_active() && resets == 0);
     auto* reset_message = find_label(lv_display_get_screen_active(display), "Clears your profile, saved sessions and invitation unlock.\n\nRestores 60% brightness and Default orientation. The clock stays set.");
     assert(reset_message);
@@ -749,7 +816,7 @@ int main(int argc, char** argv) {
     assert(resets == 0);
     tap(234, 374);
     assert(!badge::ui_reset_active() && resets == 0);
-    tap(300, 404);
+    tap_text("Reset");
     touch(234, 316, true);
     assert(resets == 0); // Press alone cannot erase anything.
     touch(234, 316, false);
@@ -785,19 +852,19 @@ int main(int argc, char** argv) {
     assert(lit_pixels(96, 72, 372, 165) == 0); // Reset cannot leave the revealed title behind.
     badge::ui_page(3); spin();
     // Reopening is always a new confirmation even after a successful reset.
-    tap(300, 404);
+    tap_text("Reset");
     assert(find_label(lv_display_get_screen_active(display), "Reset badge?"));
     badge::ui_button(false, -1); spin();
     assert(!badge::ui_reset_active() && badge::ui_page_index() == 5 && resets == 3);
 
-    tap(168, 404);
+    tap_text("Orientation"); tap_text("Touch test");
     assert(badge::ui_touch_test_active());
     badge::ui_touch_sample(234, 234, 234, 234, true, 0);
     snapshot("touch");
     assert(badge::ui_touch_state().x == 234);
     tap(234, 417);
     assert(!badge::ui_touch_test_active() && badge::ui_page_index() == 5);
-    tap(234, 360);
+    tap_text("Connect phone"); tap_text("Connect phone");
     assert(badge::ui_setup_active() && setup == 1);
     snapshot("setup");
     tap(234, 414);

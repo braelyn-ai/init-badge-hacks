@@ -93,6 +93,8 @@ void refreshModel() {
     model.clock_text = badge_clock::timeText();
     model.date_text = badge_clock::dateText();
     model.clock_valid = badge_clock::valid();
+    model.clock_epoch = badge_clock::epoch();
+    model.utc_offset_minutes = badge_clock::offset();
     model.schedule_minute = badge_schedule::localMinute(
         badge_clock::epoch(), badge_clock::offset(), model.clock_valid);
     model.schedule_current = badge_schedule::current(model.schedule_minute);
@@ -446,6 +448,12 @@ extern "C" void app_main() {
     badge::UiCallbacks callbacks;
     callbacks.request_setup = []{ startSetup(); };
     callbacks.close_setup = closeSetup;
+    callbacks.set_clock = [](int64_t epoch, int offset) {
+        std::string error;
+        bool ok = badge_clock::set(epoch, offset, "manual", error);
+        refreshModel();
+        return ok;
+    };
     callbacks.brightness = [](int value) {
         settings.setBrightness(value, board::millis());
         board::setBrightness(settings.brightness); refreshModel();

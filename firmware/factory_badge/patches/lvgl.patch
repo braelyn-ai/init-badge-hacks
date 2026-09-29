@@ -51,3 +51,24 @@ index be6ec18..70b2ba8 100644
  
      lv_draw_buf_flush_cache(gifobj->draw_buf, NULL);
      lv_image_cache_drop(lv_image_get_src(obj));
+diff --git a/src/widgets/roller/lv_roller.c b/src/widgets/roller/lv_roller.c
+--- a/src/widgets/roller/lv_roller.c
++++ b/src/widgets/roller/lv_roller.c
+@@ -595,7 +595,7 @@
+              *Will be 0 for the first option, and 1 for the last option (upscaled by << 14)*/
+             int32_t remain_h = lv_obj_get_height(label) - normal_label_font->line_height;
+             if(remain_h > 0) {
+-                label_y_prop = (label_y_prop << 14) / remain_h;
++                label_y_prop = (int32_t)(((int64_t)label_y_prop * 16384) / remain_h);
+             }
+ 
+             /*We don't want the selected label start and end exactly where the normal label is as
+@@ -604,7 +604,7 @@
+ 
+             /*Apply the proportional position to the selected text*/
+             int32_t label_sel_y = roller_h / 2 + obj->coords.y1;
+-            label_sel_y += ((label_sel_size.y - corr) * label_y_prop) >> 14;
++            label_sel_y += ((int64_t)(label_sel_size.y - corr) * label_y_prop) >> 14;
+             label_sel_y -= corr / 2;
+ 
+             int32_t bwidth = lv_obj_get_style_border_width(obj, LV_PART_MAIN);

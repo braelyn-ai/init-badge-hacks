@@ -136,3 +136,10 @@ The published daily agenda and `conference-factory-3` checks are recorded in
 Framework reuse, remaining integration issues and justified custom adapters are
 documented in the [framework audit](framework-audit-2026-09-17.md). Its findings
 are recommendations and have not yet been applied.
+
+September 28 settings: the committed LVGL patch also replaces a signed left shift
+in roller positioning with widened multiplication and widens the selected-text
+position product. Native roller rendering is exercised under the UI sanitizers.
+Settings explicitly invalidates its viewport on native menu changes because
+hidden-page reparenting could leave QR/header regions missing during partial
+flushes. The host test compares the settled menu frame to a full repaint.

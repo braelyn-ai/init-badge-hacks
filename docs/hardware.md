@@ -474,3 +474,14 @@ not measured peak RAM. Build size and free-memory snapshots change with the
 firmware; use current build output and bounded diagnostics instead of old release
 numbers. See [architecture](architecture.md) for cache behavior, startup
 measurements, and validation limits.
+
+### ESPtember calibration reference (September 28, 2026)
+
+ESPtember Day 07 (`days/day-07-touch-calibration/SPEC.md` in
+`chantastic/esptember`) specifies a device-measured affine transform plus local
+warp, stored as `espt-touch/record` with CRC, geometry and rotation validation.
+Day 08 consumes that record before delivering coordinates to LVGL. This badge
+still uses the factory native CST820 path; it does not load that record. A full
+flash erase removes NVS calibration. Do not copy another device's coefficients
+or add offsets without implementing and physically verifying the calibration
+workflow against this native board adapter.

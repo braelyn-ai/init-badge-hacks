@@ -55,7 +55,10 @@
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
   loop-up rotation 2 means blue previous / yellow next. Both open setup; either
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
-- Settings is the final page, after Hack this device. Brightness defaults to 60%
+- Settings uses native LVGL menus: Brightness, Orientation, Date / time, Hack this device,
+  Connect phone, and Reset. Calendar/time roller/UTC-offset edits apply only on Save,
+  through the main-owned checked clock service. Hack QR URL is https://workos.com/init/badge.
+  Settings is the final page, after Hack this device. Brightness defaults to 60%
   with a visible minimum and delayed persistent saves. Display clocks use h:mm
   AM/PM; UTC storage and schedule calculations remain unchanged. Orientation is exactly Free (automatic),
   Default (rotation 0), or 180° (rotation 2); new/reset badges use Default.
@@ -110,7 +113,7 @@
   `observe_taps` is an explicit, at-most-120-second physical-contact RAM recorder,
   limited to After Dark. Its timestamps describe sensor samples, not exact LVGL
   decisions; keep captures/logs private and stop recording after the requested trial.
-- Settings → Touch test is an observation-only modal: five white crosshairs,
+- Settings → Orientation → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.
   Never apply calibration, save touch data, or start networking from this test.

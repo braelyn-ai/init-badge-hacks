@@ -28,7 +28,7 @@ page:
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
    GitHub, X/Twitter and LinkedIn, including empty slots.
-5. **Hack this device. / Learn how**: real QR to `https://drop.workos.cloud/stopwatch`.
+5. **Hack this device. / Learn how**: real QR to `https://workos.com/init/badge`.
 6. **Settings**: battery percentage, brightness, local date/time, phone setup,
    touch test, reset badge, and orientation. All controls fit on one page; no settings
    scrolling is needed.
@@ -149,16 +149,26 @@ the wall clock or storage directly.
 
 ## Settings and current schedule item
 
+September 28: Settings uses native LVGL menu navigation with six buttons:
+Brightness, Orientation, Date / time, Hack this device, Connect phone, and Reset.
+Brightness and orientation changes retain delayed persistence. Touch test lives
+under Orientation. Date / time opens a Calendar, hour/minute/AM-PM rollers, and
+15-minute UTC offset controls; only Save writes the checked main-owned clock
+service. Leaving the menu discards unsaved edits. Phone clock sync remains available.
+Reset opens the existing confirmation modal. Both Hack QR views use
+`https://workos.com/init/badge`.
+
+
 Brightness applies immediately in ten-percentage-point steps, bounded to 10–100%
 with a 60% default. Existing saved brightness remains valid. The minimum maps to a nonzero display level. Brightness and
 orientation share one versioned NVS value in `conference_ui`; writes coalesce
-after 1.2 seconds without another change. Settings says `Saving settings...` below the battery
+after 1.2 seconds without another change. Settings says `Saving settings...` above the pagination dots
 while pending, and a failed write stays pending with a five-second retry.
 The existing selected-network preference remains separate. Changes made just
 before power loss may not have reached the delayed save yet.
 
 All displayed clock times use `h:mm AM/PM`, including midnight (`12:00 AM`) and
-noon (`12:00 PM`). Settings displays `YYYY-MM-DD | h:mm AM/PM`; its date and
+noon (`12:00 PM`). Settings displays `YYYY-MM-DD h:mm AM/PM`; its date and
 agenda calculations still use the same local offset from UTC.
 
 ### Reset badge
@@ -292,7 +302,7 @@ for host/device results and remaining physical checks.
 
 ## Touch alignment test
 
-Open **Settings → Touch test** to compare five white crosshair targets with the
+Open **Settings → Orientation → Touch test** to compare five white crosshair targets with the
 live purple position reported by the touch sensor. Touch or drag over the top,
 center, bottom, left and right targets. The final marker and coordinate readout
 remain visible after release so the finger does not obscure the result.
@@ -649,3 +659,13 @@ byline and tonal changes. Guarded flash completed with `UNIT_READY`, without
 storage initialization. Live screen capture confirmed both (24,24,24) current
 and (16,16,16) upcoming backgrounds. Clock/storage readiness passed; Schedule
 was left open. Evidence: `.build/schedule-final/`.
+
+September 28 Settings verification: native UI sanitizer tests passed, including
+menu navigation, clock draft/save/failure, leap-day offset conversion, discarded
+edits, and reset confirmation. The ESP32-S3 build and guarded flash passed
+`UNIT_READY`. Device framebuffer captures verified the six menu buttons,
+Calendar and both Hack QR destinations (`https://workos.com/init/badge`). Saved
+profile/preferences/unlock were preserved. The all-pages verifier deliberately
+refused this personalized board; focused checks captured only Settings/Hack.
+Manual clock writes were tested with the host callback; physical touch mapping
+was not recalibrated. Private artifacts: `.build/settings-menu/`.

@@ -16,6 +16,15 @@ power loss. Visible times use **12-hour `h:mm AM/PM`**, with no leading zero on
 the hour: midnight is `12:00 AM` and noon is `12:00 PM`. An invalid clock displays
 `--:--`.
 
+## Manual Settings editor
+
+Settings → Date / time uses LVGL Calendar and time rollers. UTC offset changes
+in 15-minute steps. Draft changes do not affect time until Save date / time;
+main calls the same checked RTC/system/NVS clock service with source `manual`.
+The editor displays success only after that service succeeds. Leaving Settings
+without saving discards the draft. The offset is fixed; phone sync can refresh it
+when daylight-saving rules change.
+
 ## Phone synchronization and Settings
 
 Opening the authorized temporary portal sends the browser's current clock to

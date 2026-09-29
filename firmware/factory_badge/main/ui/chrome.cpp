@@ -21,7 +21,7 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
         lv_obj_center(image);
         lv_obj_remove_flag(image, LV_OBJ_FLAG_CLICKABLE);
     }
-    footer_ = label(root_, "", 114, 119, 240, &font_mono_12, muted());
+    footer_ = label(root_, "", 114, 411, 240, &font_mono_12, muted());
     for (int i = 0; i < PageCount; ++i) {
         dots_[i] = container(root_, 0, 431, 8, 8);
         lv_obj_remove_flag(dots_[i], LV_OBJ_FLAG_CLICKABLE);
