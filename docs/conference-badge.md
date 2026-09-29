@@ -687,7 +687,9 @@ when inaccurate mapping prevents using Settings; it does not supply measurements
 Validation: 1,052 ESPtember contract assertions, NVS loader/save-failure fixtures,
 physical-only session fixtures, native UI sanitizers, and all five board tests
 passed. The guarded ESP32-S3 flash passed UNIT_READY. The connected device reported
-no saved record (version 0), and the wizard was opened at target 1. Physical target
-collection, resulting accuracy and on-device record persistence remain pending;
-these are not established by host tests or opening the screen. Private evidence:
+no saved record (version 0). The user completed the physical nine-target/five-check
+run; the device saved and applied version 1. A subsequent reboot reloaded version 1
+with profile, preferences and invitation unlock preserved. The holdout acceptance
+threshold passed; a separate full-screen physical accuracy survey was not performed.
+Private evidence:
 `.build/touch-mapping/`.
