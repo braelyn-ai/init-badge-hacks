@@ -59,13 +59,8 @@ def require_public_profile(state):
 def capture_pages(device, out):
     require_public_profile(device.status())
     captured, skipped = [], []
-    for index in range(6):
-        # Current firmware exposes the locked tap-entry page. Retain safe
-        # navigation for the older five-page build that hid it until reveal.
+    for index in range(5):
         state = device.status() if index == 2 else None
-        if state and state.get("page_count") == 5 and state.get("after_dark_unlocked") is False:
-            skipped.append({"page": index, "reason": "After Dark is locked"})
-            continue
         device.page(index); time.sleep(.2)
         picture = device.capture(out / f"page-{index}.png")
         captured.append(index)
@@ -84,11 +79,15 @@ def capture_pages(device, out):
                 circular.paste(invitation, mask=mask)
                 assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://luma.com/developers-after-dark"]
         if index == 4:
+            device.touch("begin", 234, 282); time.sleep(.1)
+            device.touch("end", 234, 282); time.sleep(.2)
+            picture = device.capture(out / "settings-hack.png")
             mask = Image.new("L", picture.size)
             ImageDraw.Draw(mask).ellipse((2, 1, 466, 465), fill=255)
             circular = Image.new("RGB", picture.size)
             circular.paste(picture, mask=mask)
             assert [v.text for v in zxingcpp.read_barcodes(circular)] == ["https://workos.com/init/badge"]
+    device.page(0); device.page(4)
     return captured, skipped
 
 def main():
@@ -124,11 +123,11 @@ def main():
         time.sleep(.12)
         return device.status()
     def set_orientation(name):
-        device.page(4); device.page(5); tap(234, 188)
+        device.page(0); device.page(4); tap(234, 188)
         tap(234, {"Free": 152, "Default": 202, "180°": 252}[name])
         return wait_state(lambda s: s["orientation_mode"] == name and (name == "Free" or s["rotation"] == (0 if name == "Default" else 2)))
     def set_brightness(value):
-        device.page(4); device.page(5); tap(234, 138)
+        device.page(0); device.page(4); tap(234, 138)
         for _ in range(10):
             state = device.status()
             if state["brightness_percent"] == value: return
@@ -143,7 +142,7 @@ def main():
         time.sleep(.4); after = device.capture(out / "animation-b.png")
         assert before.tobytes() != after.tobytes()
         report["animation"] = True
-        device.page(5)
+        device.page(4)
         before = device.status()
         for x, y in ((234, 138), (234, 186), (234, 234), (234, 330), (234, 378)):
             device.touch("begin", x, y)
@@ -156,12 +155,12 @@ def main():
         report["drag_rejection"] = True
         # Opening/cancelling Reset must be safe on a personalized device. Never
         # tap the destructive confirmation here; successful erasure uses fixtures.
-        device.page(4); device.page(5); tap(234, 388)
+        device.page(0); device.page(4); tap(234, 388)
         assert device.status()["reset_active"]
         device.capture(out / "reset-confirmation.png")
         device.action({"op": "button", "value": "blue"})
         cancelled = device.status()
-        assert not cancelled["reset_active"] and cancelled["page"] == 5
+        assert not cancelled["reset_active"] and cancelled["page"] == 4
         for key in ("configured_mask", "avatar", "name_present", "company_present", "schedule_bookmarks"):
             assert cancelled[key] == original[key], key
         report["reset_confirmation_cancel_preserves_data"] = True
@@ -183,14 +182,14 @@ def main():
             device.action({"op": "button", "value": "blue"})
         report["settings_and_simulated_rotated_touch"] = True
         set_orientation(original["orientation_mode"]); settle()
-        device.page(4); device.page(5); tap(234, 338); tap(234, 203)
+        device.page(0); device.page(4); tap(234, 338); tap(234, 203)
         active = wait_state(lambda s: s["setup"] and s["wifi_mode"] == 2)
         report["ap_started"] = active["wifi_mode"] == 2
         device.send({"op": "capture_badge"})
         device.response(b"CAPTURE_REJECTED")
         device.action({"op": "button", "value": "yellow"})
         closed = wait_state(lambda s: not s["setup"] and s["wifi_mode"] == 0)
-        assert closed["page"] == 5
+        assert closed["page"] == 4
         report["ap_cancel_and_private_capture_guard"] = True
         # Restart validates saved preferences and an independently restored RTC.
         device.send({"op": "reboot"}); device.close(); time.sleep(2)
@@ -199,7 +198,7 @@ def main():
         for key in ("brightness_percent", "orientation_mode", "network", "configured_mask", "avatar", "name_present", "company_present", "store_ready", "schedule_bookmarks"):
             assert restored[key] == original[key], key
         report["restart_restoration"] = True
-        device.page(5); tap(234, 188); tap(234, 352)
+        device.page(4); tap(234, 188); tap(234, 352)
         device.send({"op": "touch_test_status"})
         report["final_touch_test"] = json.loads(device.response(b"TOUCH_TEST_STATUS "))
         assert report["final_touch_test"]["active"]
@@ -213,7 +212,7 @@ def main():
             try:
                 device.send({"op": "touch", "phase": "end", "x": 234, "y": 234})
                 device.action({"op": "button", "value": "yellow"})
-                device.page(5)
+                device.page(4)
                 set_brightness(original["brightness_percent"])
                 set_orientation(original["orientation_mode"])
                 settle()

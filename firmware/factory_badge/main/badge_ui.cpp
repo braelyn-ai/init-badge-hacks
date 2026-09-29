@@ -80,7 +80,7 @@ public:
                 using Factory = std::unique_ptr<ui::PageView>(*)(ui::Context&, lv_obj_t*);
                 static constexpr Factory factories[] = {
                     ui::make_init, ui::make_schedule, ui::make_after_dark,
-                    ui::make_badge, ui::make_hack, ui::make_settings
+                    ui::make_badge, ui::make_settings
                 };
                 page_ = factories[context.page](context, page_host_);
             }
@@ -174,7 +174,7 @@ void ui_show_setup(const std::string& ssid, const std::string& password, const s
 void ui_close_setup(bool saved) {
     if (!context.setup) return;
     context.setup = false;
-    context.page = saved && context.setup_origin != 5 ? 3 : context.setup_origin;
+    context.page = saved && context.setup_origin != ui::SettingsPageIndex ? 3 : context.setup_origin;
     context.ssid.clear();
     context.password.clear();
     context.setup_status.clear();
@@ -182,7 +182,7 @@ void ui_close_setup(bool saved) {
 }
 void ui_show_touch_test() {
     if (context.setup || context.reset) return;
-    context.page = 5;
+    context.page = ui::SettingsPageIndex;
     pending_gesture = 0;
     context.touch_test = true;
     context.touch = {};
@@ -200,12 +200,12 @@ void ui_close_touch_test() {
     context.touch_test = false;
     if (context.calibration && context.callbacks.cancel_calibration) context.callbacks.cancel_calibration();
     context.calibration = false;
-    context.page = 5;
+    context.page = ui::SettingsPageIndex;
     context.rebuild = true;
 }
 void ui_show_reset() {
     if (context.setup || context.touch_test || context.reset) return;
-    context.page = 5;
+    context.page = ui::SettingsPageIndex;
     pending_gesture = 0;
     context.reset = true;
     context.reset_confirmed = false;
@@ -214,7 +214,7 @@ void ui_show_reset() {
 void ui_close_reset() {
     if (!context.reset || (context.reset_confirmed && context.model.reset_state == ResetState::Working)) return;
     context.reset = false;
-    context.page = context.reset_confirmed && context.model.reset_state == ResetState::Complete ? 3 : 5;
+    context.page = context.reset_confirmed && context.model.reset_state == ResetState::Complete ? 3 : ui::SettingsPageIndex;
     context.reset_confirmed = false;
     pending_gesture = 0;
     context.rebuild = true;

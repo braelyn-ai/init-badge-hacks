@@ -67,6 +67,7 @@ public:
                 lv_indev_get_state(input) == LV_INDEV_STATE_PRESSED)
                 lv_indev_wait_release(input);
         }
+        label(root_, "Party", 84, 52, 300, &font_sans_24, cream());
         update();
     }
     ~InvitePage() override {

@@ -11,30 +11,28 @@ the conference application. No gateway changes are required.
 
 ## Pages and controls
 
-The six primary pages always wrap in this order, including the locked After Dark
+The five primary pages always wrap in this order, including the locked After Dark
 page:
 
 1. **init()**: the supplied 10-second cross-pattern loop behind the exact init() mark.
 2. **Schedule**: vertically scrollable published init() agenda, repeating daily
    in the badge's local time. The current block says **On now**; passed blocks
    are dimmed. Times, wrapped titles and available speaker details stay visible.
-3. **Developers After Dark**: its locked page says `tap the code to reveal a secret
+3. **Party**: titled Party even while locked; its locked page says `tap the code to reveal a secret
    invitation`, with the event name hidden until reveal. Enter Morse `init` by
    tapping/holding anywhere on the page except
    its navigation arrows, or wait for the timed reveal below. Successful code
    plays the intro loop once with `You're` → `Invited` → `To`, then reveals the
    rounded event artwork. The invitation QR below opens https://luma.com/developers-after-dark.
-4. **Badge**: square manual photo, name and optional company. A configured face
+4. **Badge**: square manual photo, name and optional company. The Badge title stays visible on configured and QR views; a configured face
    hides navigation chrome, as in the supplied design. Tap it for the selected
    social QR (or setup for an empty account); swipe the face vertically through
    GitHub, X/Twitter and LinkedIn, including empty slots.
-5. **Hack this device. / Learn how**: real QR to `https://workos.com/init/badge`.
-6. **Settings**: battery percentage, brightness, local date/time, phone setup,
-   touch test, reset badge, and orientation. All controls fit on one page; no settings
-   scrolling is needed.
+5. **Settings**: includes the Hack this device QR (`https://workos.com/init/badge`), battery percentage, brightness, local date/time, phone setup,
+   touch test, reset badge, and orientation. Each category opens a native LVGL submenu.
 
 The factory 468×466 framebuffer uses the supplied pixel chevrons and small init()
-mark, with six square page indicators whether the invitation is locked or
+mark, with five square page indicators whether the invitation is locked or
 unlocked. There is no page-name footer or clock overlay. Settings retains the actual clock/battery;
 useful content and QR quiet zones remain inside the round aperture. Name display truncates at UTF-8 boundaries; the complete accepted value
 remains editable in setup. Standard firmware fonts have limited glyph coverage.
@@ -434,11 +432,11 @@ reasons, with separate last-POST evidence so captive probe GETs cannot overwrite
 it. It does not export request paths, headers, bodies, nonce or profile values.
 `status` includes the AP client count, without client identifiers, plus brightness,
 orientation mode, pending preference state/write count, page count, and current
-schedule index. `page_count` is always six; `after_dark_unlocked` and
+schedule index. `page_count` is always five; `after_dark_unlocked` and
 `after_dark_save_pending` report reveal/persistence state without user data.
 A write count is per boot and is not a flash-wear measurement.
 
-`scripts/verify-factory.py` captures all six pages, including the locked invitation
+`scripts/verify-factory.py` captures all five pages, including the locked invitation
 when applicable, and records their stable IDs in `captured_pages`. It never
 changes the clock or enters Morse to increase capture coverage. Ordinary page
 captures do not establish code-entry behavior or persistence.
@@ -691,3 +689,15 @@ spaces, wrong-symbol retries, cancellation, bounds and clock wraparound. Native
 UI tests cover visibly spaced entry with deliberately wrong grouping and a pause
 longer than the old reset deadline, plus black pressed background and no haptic
 callbacks. Existing reveal animation/QR and modal regressions passed.
+
+September 28 page titles: the five-page order is init(), Schedule, Party, Badge,
+Settings (IDs 0–4). The standalone Hack page is removed; Settings retains its
+Hack submenu and live QR. Party and Badge now have visible titles matching the
+Schedule heading. The badge QR panel starts below its title. Home remains the
+untitled init() animation; Settings uses its native menu heading. Five dots and
+all navigation/setup/reset returns use the new count and Settings ID.
+Native UI sanitizer tests and capture-navigation tests passed for the five-page
+layout. The resized badge QR still decodes in the host frame. Guarded device
+flash passed UNIT_READY; USB navigation verified the five-page wrap and the
+Settings Hack QR, preserving calibration, profile flags and invitation unlock.
+Private screenshots/logs: `.build/page-titles/`.

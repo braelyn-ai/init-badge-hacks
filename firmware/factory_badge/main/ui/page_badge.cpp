@@ -7,6 +7,7 @@ namespace badge::ui {
 class BadgePage final : public PageView {
 public:
     BadgePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
+        label(root_, "Badge", 84, 52, 300, &font_sans_24, cream());
         list_ = container(root_, 72, 83, 324, CardHeight);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);
@@ -70,6 +71,7 @@ private:
         const auto& model = context_.model;
         // Remove every image user before changing its descriptor or backing data.
         if (expanded_) { lv_obj_delete(expanded_); expanded_ = nullptr; }
+        set_hidden(list_, false);
         for (auto* card : cards_) lv_obj_clean(card);
 #if LV_CACHE_DEF_SIZE > 0
         lv_image_cache_drop(&image_);
@@ -103,7 +105,8 @@ private:
     }
     void expand(int network) {
         if (expanded_) return;
-        expanded_ = container(root_, 72, 61, 324, 342);
+        set_hidden(list_, true);
+        expanded_ = container(root_, 72, 92, 324, 322);
         lv_obj_set_style_bg_color(expanded_, lv_color_black(), 0);
         lv_obj_set_style_bg_opa(expanded_, LV_OPA_COVER, 0);
         label(expanded_, NetworkNames[network], 22, 6, 280, &font_sans_20);
@@ -112,12 +115,12 @@ private:
             button(expanded_, "Tap to configure", 62, 216, 200, 44, [this] { request_setup(context_); });
             button(expanded_, "Go back", 104, 286, 116, 40, [this] { collapse(); });
         } else {
-            qr(expanded_, urls_[network], 29, 43, 266);
-            label(expanded_, "Tap to close", 22, 319, 280, &font_mono_12, muted());
+            qr(expanded_, urls_[network], 40, 35, 244);
+            label(expanded_, "Tap to close", 22, 284, 280, &font_mono_12, muted());
             on_tap(expanded_, [this] { collapse(); });
         }
     }
-    void collapse() { lv_obj_delete(expanded_); expanded_ = nullptr; }
+    void collapse() { lv_obj_delete(expanded_); expanded_ = nullptr; set_hidden(list_, false); }
     lv_obj_t* list_ = nullptr;
     lv_obj_t* expanded_ = nullptr;
     std::array<lv_obj_t*, 3> cards_{};

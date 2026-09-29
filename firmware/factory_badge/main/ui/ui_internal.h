@@ -7,15 +7,16 @@ namespace badge::ui {
 
 constexpr int Width = 468;
 constexpr int Height = 466;
-constexpr int PageCount = 6;
+constexpr int PageCount = 5;
 constexpr int AfterDarkPage = 2;
+constexpr int SettingsPageIndex = 4;
 inline bool page_visible(int page, const UiModel&) {
     return page >= 0 && page < PageCount;
 }
 inline int visible_page_count(const UiModel&) {
     return PageCount;
 }
-inline constexpr const char* PageNames[] = {"init()", "Schedule", "After Dark", "Badge", "Hack this device", "Settings"};
+inline constexpr const char* PageNames[] = {"init()", "Schedule", "Party", "Badge", "Settings"};
 inline constexpr const char* NetworkNames[] = {"GitHub", "X / Twitter", "LinkedIn"};
 inline constexpr const char* HackUrl = "https://workos.com/init/badge";
 
@@ -52,7 +53,6 @@ std::unique_ptr<PageView> make_init(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_schedule(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_after_dark(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_badge(Context&, lv_obj_t*);
-std::unique_ptr<PageView> make_hack(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_settings(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_setup(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_calibration(Context&, lv_obj_t*);

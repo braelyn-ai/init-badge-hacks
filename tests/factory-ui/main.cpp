@@ -124,6 +124,7 @@ lv_obj_t* action_label(lv_obj_t* obj, const char* text) {
 }
 void tap_text(const char* text) {
     auto* obj = action_label(lv_screen_active(), text);
+    if (!obj) std::fprintf(stderr, "Missing action: %s on page %d\n", text, badge::ui_page_index());
     assert(obj);
     lv_obj_scroll_to_view_recursive(obj, LV_ANIM_OFF); spin();
     lv_area_t box; lv_obj_get_coords(obj, &box);
@@ -305,15 +306,15 @@ int main(int argc, char** argv) {
     spin();
 
     // The locked invitation is discoverable through every navigation route.
-    assert(badge::ui_page_count() == 6);
-    assert(visible_dots(lv_display_get_layer_top(display)) == 6);
+    assert(badge::ui_page_count() == 5);
+    assert(visible_dots(lv_display_get_layer_top(display)) == 5);
     badge::ui_open_after_dark();
     assert(badge::ui_page_index() == 0);
-    for (int id : {1, 2, 3, 4, 5, 0}) {
+    for (int id : {1, 2, 3, 4, 0}) {
         tap(434, 233);
         assert(badge::ui_page_index() == id);
     }
-    for (int id : {5, 4, 3, 2, 1, 0}) {
+    for (int id : {4, 3, 2, 1, 0}) {
         badge::ui_button(false, -1); spin();
         assert(badge::ui_page_index() == id);
     }
@@ -332,7 +333,7 @@ int main(int argc, char** argv) {
     assert_inside(invitation_prompt, lv_obj_get_parent(invitation_prompt));
     assert(!lv_obj_is_visible(find_image(lv_display_get_screen_active(display), &badge::ui::invitation_art)));
     assert(!find_label(lv_display_get_screen_active(display), "After Dark"));
-    assert(lit_pixels(54, 78, 414, 166) == 0); // The secret event name is not painted while locked.
+    assert(lit_pixels(54, 88, 414, 166) == 0); // The secret event name is not painted while locked.
     assert(!find_gif(lv_display_get_screen_active(display)));
     snapshot("after-dark-locked");
     assert_idle();
@@ -564,7 +565,7 @@ int main(int argc, char** argv) {
     touch(234, 270, false, 3);
     assert(!vibrating);
     assert(after_dark_unlocks == 1 && model.after_dark_unlocked);
-    assert(badge::ui_page_index() == 2 && badge::ui_page_count() == 6);
+    assert(badge::ui_page_index() == 2 && badge::ui_page_count() == 5);
     assert(!find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
     auto* celebration = find_gif(lv_display_get_screen_active(display));
     assert(celebration && lv_gif_is_loaded(celebration));
@@ -626,7 +627,7 @@ int main(int argc, char** argv) {
     badge::ui_update(model); spin();
     assert(badge::ui_page_index() == 2);
     assert(find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
-    assert(lit_pixels(54, 78, 414, 166) == 0); // Relocking hides the event name again.
+    assert(lit_pixels(54, 88, 414, 166) == 0); // Relocking hides the event name again.
     code_prefix(); code_pulse(true, 40);
     assert(after_dark_unlocks == 2 && model.after_dark_unlocked);
     assert(find_gif(lv_display_get_screen_active(display)));
@@ -650,9 +651,9 @@ int main(int argc, char** argv) {
     touch(434, 200, true);
     touch(434, 270, true);
     touch(434, 270, false);
-    assert(badge::ui_page_index() == 5);
+    assert(badge::ui_page_index() == 4);
     tap(234, 80);
-    assert(badge::ui_page_index() == 5);
+    assert(badge::ui_page_index() == 4);
     tap(434, 233); // A fresh arrow contact still completes normally.
     assert(badge::ui_page_index() == 0);
 
@@ -677,8 +678,8 @@ int main(int argc, char** argv) {
     assert(locked_scroll > 0);
     model.after_dark_unlocked = true;
     badge::ui_update(model); spin();
-    assert(badge::ui_page_index() == 1 && badge::ui_page_count() == 6);
-    assert(visible_dots(lv_display_get_layer_top(display)) == 6);
+    assert(badge::ui_page_index() == 1 && badge::ui_page_count() == 5);
+    assert(visible_dots(lv_display_get_layer_top(display)) == 5);
     assert(locked_title == find_label(lv_display_get_screen_active(display), badge_schedule::Items[0].title));
     assert(lv_obj_get_scroll_y(locked_schedule) == locked_scroll);
     badge::ui_open_after_dark(); spin();
@@ -699,21 +700,27 @@ int main(int argc, char** argv) {
     model.after_dark_unlocked = true;
     badge::ui_update(model);
     badge::ui_open_after_dark(); spin();
-    assert(badge::ui_setup_active() && badge::ui_page_index() == 5);
+    assert(badge::ui_setup_active() && badge::ui_page_index() == 4);
     badge::ui_close_setup(true); spin();
-    assert(badge::ui_page_index() == 5);
+    assert(badge::ui_page_index() == 4);
     badge::ui_show_touch_test();
     badge::ui_open_after_dark(); spin();
     assert(badge::ui_touch_test_active());
     badge::ui_close_touch_test();
     badge::ui_page(1); spin();
 
-    for (int page = 0; page < 6; ++page) {
+    for (int page = 0; page < 5; ++page) {
         assert(badge::ui_page_index() == page);
+        if (page) {
+            const char* titles[] = {"", "Schedule", "Party", "Badge", "Settings"};
+            auto* heading = find_label(lv_screen_active(), titles[page]);
+            assert(heading && lv_obj_is_visible(heading));
+        }
+        assert(!find_label(lv_screen_active(), "Learn how"));
         snapshot("page" + std::to_string(page));
         assert_chrome(page == 0);
         if (page != 0) assert_idle();
-        if (page < 5) {
+        if (page < 4) {
             tap(434, 233); // Native arrow hit test, release and page lifecycle.
             assert(badge::ui_page_index() == page + 1);
         }
@@ -780,7 +787,7 @@ int main(int argc, char** argv) {
     snapshot("reset-confirmation");
     badge::ui_page(1); badge::ui_open_after_dark(); spin();
     swipe(340, 245, 120, 245);
-    assert(badge::ui_reset_active() && badge::ui_page_index() == 5);
+    assert(badge::ui_reset_active() && badge::ui_page_index() == 4);
     touch(234, 316, true); touch(234, 240, true); touch(234, 316, true); touch(234, 316, false);
     touch(234, 316, true, 40); touch(234, 316, false);
     assert(resets == 0);
@@ -819,13 +826,13 @@ int main(int argc, char** argv) {
     badge::ui_page(-1); spin();
     assert(badge::ui_page_index() == 2);
     assert(find_label(lv_display_get_screen_active(display), "tap the code to reveal a secret invitation"));
-    assert(lit_pixels(96, 72, 372, 165) == 0); // Reset cannot leave the revealed title behind.
-    badge::ui_page(3); spin();
+    assert(lit_pixels(96, 88, 372, 165) == 0); // Reset cannot leave the revealed title behind.
+    badge::ui_page(2); spin();
     // Reopening is always a new confirmation even after a successful reset.
     tap_text("Reset");
     assert(find_label(lv_display_get_screen_active(display), "Reset badge?"));
     badge::ui_button(false, -1); spin();
-    assert(!badge::ui_reset_active() && badge::ui_page_index() == 5 && resets == 3);
+    assert(!badge::ui_reset_active() && badge::ui_page_index() == 4 && resets == 3);
 
     tap_text("Orientation"); tap_text("Touch test");
     assert(badge::ui_touch_test_active());
@@ -833,12 +840,12 @@ int main(int argc, char** argv) {
     snapshot("touch");
     assert(badge::ui_touch_state().x == 234);
     tap(234, 417);
-    assert(!badge::ui_touch_test_active() && badge::ui_page_index() == 5);
+    assert(!badge::ui_touch_test_active() && badge::ui_page_index() == 4);
     tap_text("Connect phone"); tap_text("Connect phone");
     assert(badge::ui_setup_active() && setup == 1);
     snapshot("setup");
     tap(234, 414);
-    assert(!badge::ui_setup_active() && badge::ui_page_index() == 5);
+    assert(!badge::ui_setup_active() && badge::ui_page_index() == 4);
     assert_chrome();
 
     // Opening the real agenda focuses the active session once. Past sessions
@@ -847,7 +854,7 @@ int main(int argc, char** argv) {
     model.schedule_minute = 9 * 60 + 45;
     model.schedule_current = badge_schedule::current(model.schedule_minute);
     badge::ui_update(model);
-    badge::ui_page(-4);
+    badge::ui_page(-3);
     spin();
     auto* first_title = find_label(lv_display_get_screen_active(display), badge_schedule::Items[0].title);
     assert(first_title);
@@ -1061,10 +1068,13 @@ int main(int argc, char** argv) {
     assert_chrome(false, true);
     assert_idle();
     tap(234, 314);
+    assert(lv_obj_is_visible(find_label(lv_screen_active(), "Badge")));
+    assert(lit_pixels(154,83,314,92)==0); // Portrait cannot peek above the QR panel.
     snapshot("expanded");
     assert_chrome(false, true);
     assert(lit_pixels(101, 104, 367, 370) > 20000); // Expanded QR is rendered.
     tap(234, 230);
+    assert(lv_obj_is_visible(find_label(lv_screen_active(), "Badge")));
     snapshot("profile-restored");
     assert_chrome(false, true);
     assert_idle();
@@ -1075,7 +1085,7 @@ int main(int argc, char** argv) {
     spin();
     tap(234, 280);
     assert(find_label(lv_display_get_screen_active(display), "No account yet"));
-    tap(234, 300);
+    tap_text("Tap to configure");
     assert(badge::ui_setup_active() && setup == 2);
     badge::ui_close_setup(true);
     spin();
@@ -1107,7 +1117,7 @@ int main(int argc, char** argv) {
     assert(find_label(lv_screen_active(), "Calibrate 1 / 9"));
     assert(lit_pixels(217,46,251,80)>30);
     snapshot("touch-calibration");
-    badge::ui_page(1); assert(badge::ui_page_index()==5);
+    badge::ui_page(1); assert(badge::ui_page_index()==4);
     badge::ui_button(false,1); spin();
     assert(!badge::ui_calibration_active() && !badge::ui_touch_test_active());
     mooncake::GetMooncake().uninstallAllApps();

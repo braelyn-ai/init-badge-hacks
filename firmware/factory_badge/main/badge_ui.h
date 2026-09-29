@@ -91,6 +91,6 @@ UiTouchSample ui_touch_state();
 bool ui_touch_test_active();
 bool ui_setup_active();
 int ui_page_index();
-int ui_page_count(); // All six pages remain visible, including the locked invite.
+int ui_page_count(); // All five pages remain visible, including the locked invite.
 
 } // namespace badge

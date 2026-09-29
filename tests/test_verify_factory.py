@@ -24,44 +24,39 @@ class FakeDevice:
         return self.state
 
     def page(self, target):
-        if target == 2 and self.state.get("page_count") == 5 and self.state.get("after_dark_unlocked") is False:
-            raise AssertionError("Attempted to navigate to a locked page")
         self.calls.append(("page", target))
 
     def capture(self, path):
         self.calls.append(("capture", path.name))
-        return SimpleNamespace(size=(468, 466))
+        return SimpleNamespace(size=(468, 466), name=path.name)
+
+    def touch(self, phase, x, y):
+        self.calls.append(("touch", phase, x, y))
 
 
 class CapturePagesTests(unittest.TestCase):
     def capture(self, state):
         device = FakeDevice(state)
+        scans = [[], [SimpleNamespace(text="https://workos.com/init/badge")]]
+        if state.get("after_dark_unlocked"):
+            scans.insert(1, [SimpleNamespace(text="https://luma.com/developers-after-dark")])
         with patch.object(factory.time, "sleep"), patch.object(
-                factory.zxingcpp, "read_barcodes",
-                return_value=[SimpleNamespace(text="https://drop.workos.cloud/stopwatch")]):
+                factory.zxingcpp, "read_barcodes", side_effect=scans):
             captured, skipped = factory.capture_pages(device, Path("unused-private-output"))
-        # Page navigation and framebuffer capture are the only mutations: never
-        # provision a clock or enter Morse merely to make a capture reachable.
-        self.assertEqual([call[1] for call in device.calls if call[0] == "page"], captured)
-        self.assertEqual(len([call for call in device.calls if call[0] == "capture"]), len(captured))
+        pages = [call[1] for call in device.calls if call[0] == "page"]
+        self.assertEqual(pages, [0, 1, 2, 3, 4, 0, 4])
+        self.assertEqual(captured, [0, 1, 2, 3, 4])
+        self.assertEqual(skipped, [])
+        self.assertIn(("capture", "settings-hack.png"), device.calls)
+        self.assertNotIn(("page", 5), device.calls)
         self.assertEqual(device.calls[0], ("status",))
-        self.assertEqual(device.calls[5], ("status",))
         return captured, skipped
 
-    def test_older_hidden_invitation_is_skipped_and_reported(self):
-        captured, skipped = self.capture({"after_dark_unlocked": False, "page_count": 5})
-        self.assertEqual(captured, [0, 1, 3, 4, 5])
-        self.assertEqual(skipped, [{"page": 2, "reason": "After Dark is locked"}])
+    def test_locked_party_and_settings_hack_menu_are_captured(self):
+        self.capture({"after_dark_unlocked": False, "page_count": 5})
 
-    def test_locked_tap_entry_page_is_captured(self):
-        captured, skipped = self.capture({"after_dark_unlocked": False, "page_count": 6})
-        self.assertEqual(captured, [0, 1, 2, 3, 4, 5])
-        self.assertEqual(skipped, [])
-
-    def test_currently_unlocked_invitation_is_captured(self):
-        captured, skipped = self.capture({"after_dark_unlocked": True, "page_count": 6})
-        self.assertEqual(captured, [0, 1, 2, 3, 4, 5])
-        self.assertEqual(skipped, [])
+    def test_unlocked_party_and_live_qr_are_captured(self):
+        self.capture({"after_dark_unlocked": True, "page_count": 5})
 
     def test_personal_fields_refuse_capture_before_navigation(self):
         # A company-only badge contains attendee data even without a name,
@@ -76,10 +71,6 @@ class CapturePagesTests(unittest.TestCase):
                     factory.capture_pages(device, Path("unused-private-output"))
                 self.assertEqual(device.calls, [("status",)])
 
-    def test_published_firmware_without_reveal_flag_retains_six_pages(self):
-        captured, skipped = self.capture({"page_count": 6})
-        self.assertEqual(captured, [0, 1, 2, 3, 4, 5])
-        self.assertEqual(skipped, [])
 
 
 if __name__ == "__main__":

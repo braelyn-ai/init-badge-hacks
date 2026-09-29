@@ -29,7 +29,7 @@ All LVGL and board calls run on the main task. HTTP and DNS run separately;
 profile snapshots hold immutable image memory. Phone clock requests are queued
 back to main, so RTC/I2C access cannot race display/input polling.
 
-After Dark retains page ID 2 and its indicator while locked; all six pages remain
+After Dark retains page ID 2 and its indicator while locked; all five pages remain
 available. Its whole-page native LVGL target says `tap the code to reveal a secret
 invitation` and measures touch press/release durations with the existing
 `MorseUnlock` helper. Chrome arrows retain navigation. Long holds
@@ -150,3 +150,5 @@ coordinates. `touch_mapping_session.cpp` accepts physical contacts only; main
 owns sampling and checked persistence. Views only draw target/status state.
 The calibration modal freezes rotation at 0 without changing saved orientation.
 The compact wizard writes v1 affine records; it also loads full existing v2 maps.
+
+Current page IDs: init 0, Schedule 1, Party 2, Badge 3, Settings 4. Hack is a Settings submenu only.

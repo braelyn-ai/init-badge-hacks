@@ -36,7 +36,7 @@
   portable helpers; do not implement new views there.
 - Current product is the **offline conference badge**. Read
   [conference-badge.md](docs/conference-badge.md) and
-  [conference-clock.md](docs/conference-clock.md). The six-page UI supersedes
+  [conference-clock.md](docs/conference-clock.md). The five-page UI supersedes
   the connected badge/voice controls below; that previous application is retained
   in `legacy_connected_app.h` and Git history and is not compiled into this build.
 - The September 17 supplied init() designs use exact exported brand masks in
@@ -58,7 +58,7 @@
 - Settings uses native LVGL menus: Brightness, Orientation, Date / time, Hack this device,
   Connect phone, and Reset. Calendar/time roller/UTC-offset edits apply only on Save,
   through the main-owned checked clock service. Hack QR URL is https://workos.com/init/badge.
-  Settings is the final page, after Hack this device. Brightness defaults to 60%
+  Settings is page 4, after Badge; Hack this device exists only in its submenu. Brightness defaults to 60%
   with a visible minimum and delayed persistent saves. Display clocks use h:mm
   AM/PM; UTC storage and schedule calculations remain unchanged. Orientation is exactly Free (automatic),
   Default (rotation 0), or 180° (rotation 2); new/reset badges use Default.
@@ -80,7 +80,9 @@
   conference profile/photo/links, bookmarks, UI preferences and After Dark unlock;
   retain clock and legacy records. Never exercise confirmed reset
   on a personalized device merely to test it. Use synthetic storage fixtures.
-- After Dark is always a visible page; retain all six pages/dots and stable IDs.
+- Party is always visible (internal After Dark page ID 2). Use five pages/dots:
+  init() 0, Schedule 1, Party 2, Badge 3, Settings 4. All except init() have a
+  visible title; Badge retains its title even with a configured profile or QR.
   Its locked page hides the event name and says
   `tap the code to reveal a secret invitation`. Enter Morse
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation
