@@ -49,9 +49,11 @@
   the UI; retained legacy storage is not read into a visible bookmark control. A configured profile hides chrome but retains
   physical/horizontal paging and tap-to-QR. Do not substitute the mockup's sample
   QR for real phone credentials or a pending invitation destination.
-- Normal operation has Wi-Fi and Bluetooth off. Temporary setup is AP-only,
-  with manual name/social fields and image upload. Never load authenticated
-  identity caches into the manual conference model or require a cloud login.
+- Normal operation has Wi-Fi and Bluetooth off. Temporary setup offers manual
+  name/social fields, image upload, and event Wi-Fi settings. Saving a network
+  never joins it; an explicit test or future fetch/refresh may join briefly and
+  must disconnect when the action ends. Never load authenticated identity caches
+  into the manual conference model or require a cloud login.
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
   loop-up rotation 2 means blue previous / yellow next. Both open setup; either
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.

@@ -7,6 +7,7 @@
 #include <vector>
 
 namespace badge {
+struct WifiCredentials;
 struct Profile { std::string name; std::string urls[3]; std::string company; };
 struct ProfileSnapshot {
   Profile profile;
@@ -28,6 +29,17 @@ struct PortalSnapshot {
   PortalOutcome outcome = PortalOutcome::None;
   uint8_t clients = 0;
 };
+enum class WifiFetchState : uint8_t { Idle, Pending, Running, Succeeded, Failed };
+struct WifiFetchSnapshot {
+  WifiFetchState state = WifiFetchState::Idle;
+  int http_status = 0;
+  unsigned bytes = 0;
+};
+// One explicit, bounded HTTPS read. The service worker owns the entire station
+// lifecycle and returns to Wi-Fi off before reporting a terminal state.
+// temporary is used only for a local diagnostic; it is never saved to NVS.
+bool wifi_fetch_request(const WifiCredentials* temporary = nullptr);
+WifiFetchSnapshot wifi_fetch_snapshot();
 // Callback runs on the HTTP task; board/clock implementation must serialize RTC
 // access and return success only after RTC, system clock and NVS readback.
 using PhoneClockSync = std::function<bool(int64_t, int, ClockSnapshot&, std::string&)>;

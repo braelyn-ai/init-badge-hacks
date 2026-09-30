@@ -3,6 +3,7 @@
 #include "badge_ui.h"
 #include "clock_service.h"
 #include "services.h"
+#include "wifi_config.h"
 #include "conference_settings.h"
 #include "schedule.h"
 #include "schedule_bookmarks.h"
@@ -142,7 +143,12 @@ void status(const char* nonce) {
     data["reset_state"] = int(model.reset_state);
     data["name_present"] = !saved.profile.name.empty(); data["store_ready"] = saved.ready;
     data["setup"] = setupRequested || portal.active || portal.starting;
-    data["wifi_mode"] = int(wifi); data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
+    badge::WifiCredentials savedWifi;
+    data["wifi_mode"] = int(wifi); data["wifi_saved"] = badge::wifi_credentials_load(savedWifi);
+    auto fetch = badge::wifi_fetch_snapshot();
+    data["wifi_fetch_state"] = int(fetch.state); data["wifi_fetch_http"] = fetch.http_status;
+    data["wifi_fetch_bytes"] = fetch.bytes;
+    data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
     data["touch_calibration_version"] = touch_mapping::version();
     data["calibration_active"] = badge::ui_calibration_active();
     data["calibration_message"] = calibration.message();
@@ -249,6 +255,27 @@ void command(JsonDocument& data) {
     const char* nonce = data["nonce"] | "";
     if (!strcmp(op, "clock_set") || !strcmp(op, "clock_status")) clockCommand(data);
     else if (!strcmp(op, "status")) { if (data["reset_metrics"] | false) maxLoopGap = 0; status(nonce); }
+    else if (!strcmp(op, "wifi_config") && badge_clock::validNonce(nonce)) {
+        // A local USB diagnostic for provisioning/test. Never return a password.
+        const char* ssid = data["ssid"] | ""; const char* password = data["password"] | "";
+        badge::WifiCredentials credentials{ssid, password};
+        const bool ok = !setupRequested && !badge::ui_reset_active() &&
+            badge::wifi_credentials_save(credentials);
+        JsonDocument result; result["ok"] = ok; result["nonce"] = nonce;
+        reply("WIFI_CONFIG_ACK ", result);
+    }
+    else if (!strcmp(op, "wifi_fetch") && badge_clock::validNonce(nonce)) {
+        badge::WifiCredentials temporary;
+        const bool provided = data["ssid"].is<const char*>() && data["password"].is<const char*>();
+        if (provided) {
+            temporary.ssid = data["ssid"].as<std::string>();
+            temporary.password = data["password"].as<std::string>();
+        }
+        const bool ok = !setupRequested && badge::wifi_fetch_request(provided ? &temporary : nullptr);
+        std::fill(temporary.password.begin(), temporary.password.end(), '\0');
+        JsonDocument result; result["ok"] = ok; result["nonce"] = nonce;
+        reply("WIFI_FETCH_ACK ", result);
+    }
     else if (!strcmp(op, "touch_test_status")) touchStatus(nonce);
     else if (!strcmp(op, "calibrate_touch")) {
         if (!badge_clock::validNonce(nonce) || setupRequested || badge::ui_setup_active() || badge::ui_touch_test_active() || badge::ui_reset_active()) { line("COMMAND_REJECTED"); return; }
@@ -404,7 +431,7 @@ void pollReset() {
         nvs_set_u8(preferences, "after_dark_v1", badge_after_dark::Unlock::SavedLocked) == ESP_OK &&
         nvs_commit(preferences) == ESP_OK;
     resetRequested = false;
-    if (saved) {
+    if (saved && badge::wifi_credentials_forget()) {
         ++preferenceWrites;
         settings = defaults;
         bookmarks = emptyBookmarks;

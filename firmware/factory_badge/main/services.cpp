@@ -1,5 +1,6 @@
 #include "services.h"
 #include "portal_page.h"
+#include "wifi_config.h"
 #include "../../devices_badge/avatar_decode.h"
 #include <algorithm>
 #include <atomic>
@@ -13,6 +14,8 @@
 #include "cJSON.h"
 #include "esp_event.h"
 #include "esp_http_server.h"
+#include "esp_http_client.h"
+#include "esp_crt_bundle.h"
 #include "esp_littlefs.h"
 #include "esp_mac.h"
 #include "esp_netif.h"
@@ -37,11 +40,14 @@ struct TrackedSocket { int fd = -1; int64_t opened_at = 0; };
 TrackedSocket tracked_sockets[3];
 ProfileSnapshot stored;
 PortalSnapshot portal;
+WifiFetchSnapshot fetch_state;
+WifiCredentials fetch_credentials;
 ProfileResetSnapshot reset_state; // Protected by portal_mutex with AP lifecycle.
 PhoneClockSync sync_clock;
 std::atomic<bool> requested{false}, running{false};
 TaskHandle_t service_task = nullptr;
 esp_netif_t* ap_netif = nullptr;
+esp_netif_t* station_netif = nullptr;
 httpd_handle_t server = nullptr;
 int dns_socket = -1;
 std::string session_nonce, staged_token;
@@ -250,9 +256,12 @@ std::string escape(const std::string& input) {
 void replace_token(std::string& s, const char* token, const std::string& value) { auto pos = s.find(token); if (pos != std::string::npos) s.replace(pos, strlen(token), value); }
 std::string page() {
   auto current = profile_snapshot(); std::string html = BADGE_PORTAL_HTML;
+  WifiCredentials wifi; const bool configured = wifi_credentials_load(wifi);
   // Replace template tokens from the end so attendee text cannot introduce a new token.
   replace_token(html, "{{NONCE}}", session_nonce);
   replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
+  replace_token(html, "{{WIFI_SSID}}", escape(configured ? wifi.ssid : "init() attendee"));
+  replace_token(html, "{{WIFI_STATUS}}", configured ? "Network saved on this badge. Wi-Fi is off until you test or refresh." : "No network saved. Enter the event Wi-Fi below.");
   replace_token(html, "{{LINKEDIN}}", escape(current.profile.urls[2])); replace_token(html, "{{X}}", escape(current.profile.urls[1]));
   replace_token(html, "{{GITHUB}}", escape(current.profile.urls[0])); replace_token(html, "{{COMPANY}}", escape(current.profile.company));
   replace_token(html, "{{NAME}}", escape(current.profile.name)); return html;
@@ -333,9 +342,100 @@ esp_err_t handle_get(httpd_req_t* req) {
   if (strcmp(req->uri, "/")) { httpd_resp_set_status(req, "302 Found"); httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/"); return httpd_resp_send(req, "", 0); }
   httpd_resp_set_type(req, "text/html; charset=utf-8"); auto html = page(); return httpd_resp_send(req, html.data(), html.size());
 }
+bool station_test_connection(const WifiCredentials& credentials) {
+  // Only this explicit action starts the station. The setup AP stays available.
+  if (!station_netif) station_netif = esp_netif_create_default_wifi_sta();
+  if (!station_netif) return false;
+  wifi_config_t config = {};
+  memcpy(config.sta.ssid, credentials.ssid.data(), credentials.ssid.size());
+  memcpy(config.sta.password, credentials.password.data(), credentials.password.size());
+  bool started = esp_wifi_set_mode(WIFI_MODE_APSTA) == ESP_OK &&
+    esp_wifi_set_config(WIFI_IF_STA, &config) == ESP_OK &&
+    esp_wifi_connect() == ESP_OK;
+  bool joined = false;
+  if (started) {
+    const int64_t deadline = monotonic_ms() + 8000;
+    while (session_open() && monotonic_ms() < deadline) {
+      wifi_ap_record_t access = {};
+      esp_netif_ip_info_t ip = {};
+      if (esp_wifi_sta_get_ap_info(&access) == ESP_OK &&
+          esp_netif_get_ip_info(station_netif, &ip) == ESP_OK && ip.ip.addr != 0) {
+        joined = true;
+        break;
+      }
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
+  }
+  esp_wifi_disconnect();
+  const bool restored = esp_wifi_set_mode(WIFI_MODE_AP) == ESP_OK;
+  esp_netif_destroy_default_wifi(station_netif);
+  station_netif = nullptr;
+  if (!restored) return false;
+  return joined;
+}
+WifiFetchSnapshot fetch_once(const WifiCredentials& credentials) {
+  WifiFetchSnapshot result;
+  result.state = WifiFetchState::Failed;
+  if (!station_netif) station_netif = esp_netif_create_default_wifi_sta();
+  if (!station_netif) return result;
+  wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
+  if (esp_wifi_init(&init) != ESP_OK) {
+    esp_netif_destroy_default_wifi(station_netif);
+    station_netif = nullptr;
+    return result;
+  }
+  bool started = false;
+  do {
+    wifi_config_t config = {};
+    memcpy(config.sta.ssid, credentials.ssid.data(), credentials.ssid.size());
+    memcpy(config.sta.password, credentials.password.data(), credentials.password.size());
+    if (esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK ||
+        esp_wifi_set_mode(WIFI_MODE_STA) != ESP_OK ||
+        esp_wifi_set_config(WIFI_IF_STA, &config) != ESP_OK ||
+        esp_wifi_start() != ESP_OK) break;
+    started = true;
+    if (esp_wifi_connect() != ESP_OK) break;
+    const int64_t deadline = monotonic_ms() + 10000;
+    bool joined = false;
+    while (monotonic_ms() < deadline) {
+      wifi_ap_record_t access = {};
+      esp_netif_ip_info_t ip = {};
+      if (esp_wifi_sta_get_ap_info(&access) == ESP_OK &&
+          esp_netif_get_ip_info(station_netif, &ip) == ESP_OK && ip.ip.addr != 0) {
+        joined = true; break;
+      }
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    if (!joined) break;
+    esp_http_client_config_t http = {};
+    http.url = "https://workos.com/init";
+    http.crt_bundle_attach = esp_crt_bundle_attach;
+    http.timeout_ms = 7000;
+    http.disable_auto_redirect = true;
+    http.user_agent = "init-badge/1";
+    esp_http_client_handle_t client = esp_http_client_init(&http);
+    if (!client) break;
+    if (esp_http_client_open(client, 0) == ESP_OK) {
+      esp_http_client_fetch_headers(client);
+      result.http_status = esp_http_client_get_status_code(client);
+      uint8_t data[1024];
+      int bytes = esp_http_client_read(client, reinterpret_cast<char*>(data), sizeof(data));
+      if (bytes > 0) result.bytes = bytes;
+      if (result.http_status == 200 && result.bytes > 0) result.state = WifiFetchState::Succeeded;
+    }
+    esp_http_client_cleanup(client);
+  } while (false);
+  if (started) esp_wifi_disconnect();
+  esp_wifi_stop();
+  esp_wifi_deinit();
+  esp_netif_destroy_default_wifi(station_netif);
+  station_netif = nullptr;
+  return result;
+}
 esp_err_t handle_post(httpd_req_t* req) {
   const bool image = !strcmp(req->uri, "/image"), clock = !strcmp(req->uri, "/clock"), cancel = !strcmp(req->uri, "/cancel"), save = !strcmp(req->uri, "/save");
-  if (!(image || clock || cancel || save)) return message(req, 400, "Unknown request.");
+  const bool wifi_save = !strcmp(req->uri, "/wifi/save"), wifi_test = !strcmp(req->uri, "/wifi/test"), wifi_forget = !strcmp(req->uri, "/wifi/forget");
+  if (!(image || clock || cancel || save || wifi_save || wifi_test || wifi_forget)) return message(req, 400, "Unknown request.");
   std::string nonce, type;
   if (!session_open() || !header(req, "X-Conference-Nonce", nonce, 32) || nonce != session_nonce) return message(req, 403, "Open the current badge setup page.");
   if (httpd_req_get_hdr_value_len(req, "Transfer-Encoding") || req->content_len == 0 || req->content_len > (image ? kImageLimit : 2048)) return message(req, 413, "Request is too large or unsupported.");
@@ -366,6 +466,27 @@ esp_err_t handle_post(httpd_req_t* req) {
   const char* parsed_end = nullptr;
   std::unique_ptr<cJSON, decltype(&cJSON_Delete)> json(cJSON_ParseWithLengthOpts(reinterpret_cast<char*>(bytes.get()), used + 1, &parsed_end, true), cJSON_Delete);
   if (!json || !cJSON_IsObject(json.get())) return message(req, 400, "Invalid form. Reload and try again.");
+  if (wifi_save) {
+    if (!json_fields(json.get(), {"ssid", "password"})) return message(req, 400, "Unexpected Wi-Fi field.");
+    auto ssid = cJSON_GetObjectItemCaseSensitive(json.get(), "ssid"), password = cJSON_GetObjectItemCaseSensitive(json.get(), "password");
+    if (!cJSON_IsString(ssid) || !cJSON_IsString(password)) return message(req, 400, "Enter a network name and optional password.");
+    WifiCredentials credentials{ssid->valuestring, password->valuestring};
+    if (!wifi_credentials_valid(credentials)) return message(req, 400, "Use a network name of 1–32 bytes and either no password or 8–63 characters.");
+    if (!wifi_credentials_save(credentials)) return message(req, 500, "Could not save Wi-Fi. Try again.");
+    return message(req, 200, "Wi-Fi saved. The badge is offline until you test or refresh.");
+  }
+  if (wifi_forget) {
+    if (json->child) return message(req, 400, "Unexpected Wi-Fi field.");
+    if (!wifi_credentials_forget()) return message(req, 500, "Could not forget Wi-Fi. Try again.");
+    return message(req, 200, "Saved Wi-Fi removed. The badge remains offline.");
+  }
+  if (wifi_test) {
+    if (json->child) return message(req, 400, "Unexpected Wi-Fi field.");
+    WifiCredentials credentials;
+    if (!wifi_credentials_load(credentials)) return message(req, 400, "Save Wi-Fi before testing it.");
+    const bool joined = station_test_connection(credentials);
+    return message(req, joined ? 200 : 503, joined ? "Connected to the event Wi-Fi and received an address. Disconnected again." : "Could not join the event Wi-Fi. The badge is offline; check the network and try again.");
+  }
   if (cancel) {
     if (json->child) return message(req, 400, "Unexpected cancel field.");
     auto result = message(req, 200, "Profile changes cancelled. Any successful clock sync is kept. You may close this page.");
@@ -447,6 +568,23 @@ void dns_tick() {
 void service_loop(void*) {
   for (;;) {
     process_profile_reset();
+    bool fetch = false;
+    WifiCredentials credentials;
+    {
+      std::lock_guard<std::mutex> lock(portal_mutex);
+      if (fetch_state.state == WifiFetchState::Pending && !requested && !running) {
+        fetch_state.state = WifiFetchState::Running;
+        credentials = std::move(fetch_credentials);
+        fetch = true;
+      }
+    }
+    if (fetch) {
+      auto result = fetch_once(credentials);
+      std::fill(credentials.password.begin(), credentials.password.end(), '\0');
+      credentials = {};
+      std::lock_guard<std::mutex> lock(portal_mutex);
+      fetch_state = result;
+    }
     if (requested && !running) {
       bool ok = start_network();
       if (!ok) { requested = false; stop_network(); }
@@ -480,6 +618,20 @@ void service_loop(void*) {
 
 ProfileSnapshot profile_snapshot() { std::lock_guard<std::mutex> lock(data_mutex); return stored; }
 PortalSnapshot portal_snapshot() { std::lock_guard<std::mutex> lock(portal_mutex); return portal; }
+WifiFetchSnapshot wifi_fetch_snapshot() { std::lock_guard<std::mutex> lock(portal_mutex); return fetch_state; }
+bool wifi_fetch_request(const WifiCredentials* temporary) {
+  std::lock_guard<std::mutex> lock(portal_mutex);
+  if (portal.active || portal.starting || requested || running || reset_pending() ||
+      fetch_state.state == WifiFetchState::Pending || fetch_state.state == WifiFetchState::Running) return false;
+  WifiCredentials credentials;
+  if (temporary) {
+    if (!wifi_credentials_valid(*temporary)) return false;
+    credentials = *temporary;
+  } else if (!wifi_credentials_load(credentials)) return false;
+  fetch_credentials = std::move(credentials);
+  fetch_state = {WifiFetchState::Pending, 0, 0};
+  return true;
+}
 bool profile_reset_request(std::string& error) { return queue_profile_reset(error); }
 ProfileResetSnapshot profile_reset_snapshot() { std::lock_guard<std::mutex> lock(portal_mutex); return reset_state; }
 bool services_init(PhoneClockSync clock_sync) {
@@ -502,12 +654,12 @@ bool services_init(PhoneClockSync clock_sync) {
   { std::lock_guard<std::mutex> lock(data_mutex); stored = std::move(initial); }
   auto net = esp_netif_init(); if (net != ESP_OK && net != ESP_ERR_INVALID_STATE) return false;
   auto event = esp_event_loop_create_default(); if (event != ESP_OK && event != ESP_ERR_INVALID_STATE) return false;
-  if (!service_task && xTaskCreate(service_loop, "badge_services", 6144, nullptr, 3, &service_task) != pdPASS) return false;
+  if (!service_task && xTaskCreate(service_loop, "badge_services", 12288, nullptr, 3, &service_task) != pdPASS) return false;
   return profile_snapshot().ready;
 }
 bool portal_start(const char* test_password) {
   std::lock_guard<std::mutex> lock(portal_mutex);
-  if (reset_pending()) return false;
+  if (reset_pending() || fetch_state.state == WifiFetchState::Pending || fetch_state.state == WifiFetchState::Running) return false;
   if (portal.active || portal.starting || running) return true;
   portal = {}; auto current = profile_snapshot();
   if (!current.ready || !service_task) { portal.error = current.error.empty() ? "Setup is unavailable" : current.error; portal.outcome = PortalOutcome::Error; return false; }

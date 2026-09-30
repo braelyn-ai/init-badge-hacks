@@ -317,7 +317,20 @@ It reads only the temporary test state and does not activate the test.
 
 Setup creates a temporary password-protected hotspot with a per-device SSID.
 Scan its Wi-Fi QR, then use the captive page or `http://192.168.4.1`.
-There is no internet requirement, station connection, scraping, or sign-in.
+The page pre-fills the confirmed open event network `init() attendee`; its
+password is blank. Save Wi-Fi stores the chosen SSID and optional password on
+this badge without joining the network. Test connection briefly joins the saved
+network, waits for an IP address, then disconnects and returns to the setup AP.
+Forget Wi-Fi removes the saved choice. These are separate from Save badge, so
+editing Wi-Fi cannot silently change a profile. Ordinary badge use keeps the
+station radio off. A USB-requested probe currently makes one certificate-checked
+HTTPS GET to `https://workos.com/init`, reads at most 1 KiB, then disconnects,
+whether the request succeeds or fails. The probe has no unattended timer or
+background retry. It verifies the connect/fetch/disconnect path without adding
+provider sign-in or profile import. Future refresh actions must use the same
+bounded lifecycle. A local USB diagnostic may provide temporary Wi-Fi credentials
+in RAM for one probe; they are not saved to NVS, built into firmware, or echoed
+by status. The portal saves the attendee network for later explicit fetches.
 On each page load, the browser automatically submits its current epoch and UTC
 offset to a separate authorized clock endpoint. Clock status and Retry are
 independent of Save badge. Each retry samples time again. A successful sync is
