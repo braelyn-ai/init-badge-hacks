@@ -143,8 +143,7 @@ void status(const char* nonce) {
     data["reset_state"] = int(model.reset_state);
     data["name_present"] = !saved.profile.name.empty(); data["store_ready"] = saved.ready;
     data["setup"] = setupRequested || portal.active || portal.starting;
-    badge::WifiCredentials savedWifi;
-    data["wifi_mode"] = int(wifi); data["wifi_saved"] = badge::wifi_credentials_load(savedWifi);
+    data["wifi_mode"] = int(wifi); data["wifi_custom"] = badge::wifi_credentials_custom();
     auto fetch = badge::wifi_fetch_snapshot();
     data["wifi_fetch_state"] = int(fetch.state); data["wifi_fetch_http"] = fetch.http_status;
     data["wifi_fetch_bytes"] = fetch.bytes;

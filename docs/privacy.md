@@ -38,7 +38,7 @@ This firmware is configured for chan.dev's Production Devices application. Each 
 | Data | Location |
 | --- | --- |
 | Public AuthKit client ID, service URLs, certificate roots | Firmware source and compiled application |
-| Wi-Fi network name and password | Device NVS, entered through its local setup portal |
+| Wi-Fi network name and password | The open event network is compiled into firmware; any other network is saved only in device NVS through the local setup portal |
 | WorkOS refresh token, user ID, organization ID, and account email | Device NVS session record |
 | WorkOS access token | Device RAM |
 | LinkedIn, X, and GitHub OAuth/provider tokens | Existing chan.dev/WorkOS services; not sent to this firmware |

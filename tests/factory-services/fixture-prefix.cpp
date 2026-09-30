@@ -59,7 +59,8 @@ int mbedtls_sha256_starts(mbedtls_sha256_context* c,int){return CC_SHA256_Init(c
 int mbedtls_sha256_update(mbedtls_sha256_context* c,const uint8_t* d,size_t n){return CC_SHA256_Update(c,d,n)==1?0:-1;}
 int mbedtls_sha256_finish(mbedtls_sha256_context* c,uint8_t* d){return CC_SHA256_Final(d,c)==1?0:-1;}
 namespace badge {
-bool wifi_credentials_load(WifiCredentials& credentials) { credentials = {}; return false; }
+bool wifi_credentials_load(WifiCredentials& credentials) { credentials = {kEventWifiSsid, ""}; return true; }
+bool wifi_credentials_custom() { return false; }
 namespace {
 constexpr size_t kHeader=64,kMetadata=768,kAvatarSide=160,kAvatarBytes=kAvatarSide*kAvatarSide*2;
 constexpr uint8_t kMagic[8]={'I','N','I','T','C','F','0','1'};

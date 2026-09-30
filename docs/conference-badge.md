@@ -170,7 +170,8 @@ blocked; the reset view holds the current orientation.
 The existing service worker atomically saves an empty manual profile, clearing
 name, company, photo and social URLs. Main then writes default conference settings:
 60% brightness, Default orientation, first network, no saved agenda bookmarks
-and a cleared After Dark unlock. It discards any pending unlock save so it cannot
+and a cleared After Dark unlock. It also removes any saved Wi-Fi override, so the
+badge returns to the built-in event network. It discards any pending unlock save so it cannot
 restore the old invitation state. The clock, legacy records and partition map
 remain. A clock at or after the automatic reveal cutoff can unlock it again.
 This is a logical badge reset, not a secure erase or factory firmware restoration.
@@ -317,11 +318,14 @@ It reads only the temporary test state and does not activate the test.
 
 Setup creates a temporary password-protected hotspot with a per-device SSID.
 Scan its Wi-Fi QR, then use the captive page or `http://192.168.4.1`.
-The page pre-fills the confirmed open event network `init() attendee`; its
-password is blank. Save Wi-Fi stores the chosen SSID and optional password on
-this badge without joining the network. Test connection briefly joins the saved
+The confirmed open event network `init() attendee` (blank password) is compiled
+into firmware as the default, so every badge can refresh at the event without
+setup. The page pre-fills the network in use. Save Wi-Fi stores a different SSID
+and optional password in this badge's NVS without joining the network; saving
+the event network just clears any override. Personal and test networks are never
+compiled in or committed. Test connection briefly joins the saved
 network, waits for an IP address, then disconnects and returns to the setup AP.
-Forget Wi-Fi removes the saved choice. These are separate from Save badge, so
+**Use event Wi-Fi** removes the saved override and returns to the built-in network. These are separate from Save badge, so
 editing Wi-Fi cannot silently change a profile. Ordinary badge use keeps the
 station radio off. A USB-requested probe currently makes one certificate-checked
 HTTPS GET to `https://workos.com/init`, reads at most 1 KiB, then disconnects,
@@ -330,7 +334,7 @@ background retry. It verifies the connect/fetch/disconnect path without adding
 provider sign-in or profile import. Future refresh actions must use the same
 bounded lifecycle. A local USB diagnostic may provide temporary Wi-Fi credentials
 in RAM for one probe; they are not saved to NVS, built into firmware, or echoed
-by status. The portal saves the attendee network for later explicit fetches.
+by status. Explicit fetches use the saved override or, by default, the event network.
 On each page load, the browser automatically submits its current epoch and UTC
 offset to a separate authorized clock endpoint. Clock status and Retry are
 independent of Save badge. Each retry samples time again. A successful sync is

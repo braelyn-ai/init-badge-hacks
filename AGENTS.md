@@ -50,8 +50,10 @@
   physical/horizontal paging and tap-to-QR. Do not substitute the mockup's sample
   QR for real phone credentials or a pending invitation destination.
 - Normal operation has Wi-Fi and Bluetooth off. Temporary setup offers manual
-  name/social fields, image upload, and event Wi-Fi settings. Saving a network
-  never joins it; an explicit test or future fetch/refresh may join briefly and
+  name/social fields, image upload, and event Wi-Fi settings. The open event
+  network `init() attendee` is compiled in as the default; any other network is a
+  runtime-only NVS override. Never put personal or test Wi-Fi in source, firmware
+  or Git. Saving a network never joins it; an explicit test or future fetch/refresh may join briefly and
   must disconnect when the action ends. Never load authenticated identity caches
   into the manual conference model or require a cloud login.
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
@@ -79,8 +81,8 @@
   Times use #E7E7E7, slightly dimmer than white titles.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
-  conference profile/photo/links, bookmarks, UI preferences and After Dark unlock;
-  retain clock and legacy records. Never exercise confirmed reset
+  conference profile/photo/links, bookmarks, UI preferences, After Dark unlock and
+  any Wi-Fi override (restoring the event network); retain clock and legacy records. Never exercise confirmed reset
   on a personalized device merely to test it. Use synthetic storage fixtures.
 - Party is always visible (internal After Dark page ID 2). Use five pages/dots:
   init() 0, Schedule 1, Party 2, Badge 3, Settings 4. All except init() have a

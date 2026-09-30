@@ -13,12 +13,15 @@ bool printable(const std::string& value) {
 }
 }
 
+WifiCredentials wifi_event_credentials() { return {kEventWifiSsid, ""}; }
+
 bool wifi_credentials_valid(const WifiCredentials& credentials) {
   return !credentials.ssid.empty() && credentials.ssid.size() <= 32 && printable(credentials.ssid) &&
     (credentials.password.empty() || (credentials.password.size() >= 8 && credentials.password.size() <= 63 && printable(credentials.password)));
 }
 
-bool wifi_credentials_load(WifiCredentials& credentials) {
+namespace {
+bool load_override(WifiCredentials& credentials) {
   credentials = {};
   nvs_handle_t handle;
   if (nvs_open(kNamespace, NVS_READONLY, &handle) != ESP_OK) return false;
@@ -34,9 +37,24 @@ bool wifi_credentials_load(WifiCredentials& credentials) {
   credentials = std::move(loaded);
   return true;
 }
+bool is_event(const WifiCredentials& credentials) {
+  return credentials.ssid == kEventWifiSsid && credentials.password.empty();
+}
+}
+
+bool wifi_credentials_load(WifiCredentials& credentials) {
+  if (!load_override(credentials)) credentials = wifi_event_credentials();
+  return true;
+}
+
+bool wifi_credentials_custom() {
+  WifiCredentials saved;
+  return load_override(saved) && !is_event(saved);
+}
 
 bool wifi_credentials_save(const WifiCredentials& credentials) {
   if (!wifi_credentials_valid(credentials)) return false;
+  if (is_event(credentials)) return wifi_credentials_forget();
   nvs_handle_t handle;
   if (nvs_open(kNamespace, NVS_READWRITE, &handle) != ESP_OK) return false;
   const bool ok = nvs_set_str(handle, "ssid", credentials.ssid.c_str()) == ESP_OK &&

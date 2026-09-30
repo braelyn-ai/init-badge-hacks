@@ -256,12 +256,12 @@ std::string escape(const std::string& input) {
 void replace_token(std::string& s, const char* token, const std::string& value) { auto pos = s.find(token); if (pos != std::string::npos) s.replace(pos, strlen(token), value); }
 std::string page() {
   auto current = profile_snapshot(); std::string html = BADGE_PORTAL_HTML;
-  WifiCredentials wifi; const bool configured = wifi_credentials_load(wifi);
+  WifiCredentials wifi; wifi_credentials_load(wifi); const bool custom = wifi_credentials_custom();
   // Replace template tokens from the end so attendee text cannot introduce a new token.
   replace_token(html, "{{NONCE}}", session_nonce);
   replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
-  replace_token(html, "{{WIFI_SSID}}", escape(configured ? wifi.ssid : "init() attendee"));
-  replace_token(html, "{{WIFI_STATUS}}", configured ? "Network saved on this badge. Wi-Fi is off until you test or refresh." : "No network saved. Enter the event Wi-Fi below.");
+  replace_token(html, "{{WIFI_SSID}}", escape(wifi.ssid));
+  replace_token(html, "{{WIFI_STATUS}}", custom ? "A different network is saved on this badge. Wi-Fi is off until you test or refresh." : "Using the built-in event Wi-Fi. Wi-Fi is off until you test or refresh.");
   replace_token(html, "{{LINKEDIN}}", escape(current.profile.urls[2])); replace_token(html, "{{X}}", escape(current.profile.urls[1]));
   replace_token(html, "{{GITHUB}}", escape(current.profile.urls[0])); replace_token(html, "{{COMPANY}}", escape(current.profile.company));
   replace_token(html, "{{NAME}}", escape(current.profile.name)); return html;
@@ -473,17 +473,17 @@ esp_err_t handle_post(httpd_req_t* req) {
     WifiCredentials credentials{ssid->valuestring, password->valuestring};
     if (!wifi_credentials_valid(credentials)) return message(req, 400, "Use a network name of 1–32 bytes and either no password or 8–63 characters.");
     if (!wifi_credentials_save(credentials)) return message(req, 500, "Could not save Wi-Fi. Try again.");
-    return message(req, 200, "Wi-Fi saved. The badge is offline until you test or refresh.");
+    return message(req, 200, wifi_credentials_custom() ? "Wi-Fi saved. The badge is offline until you test or refresh." : "Using the built-in event Wi-Fi. The badge is offline until you test or refresh.");
   }
   if (wifi_forget) {
     if (json->child) return message(req, 400, "Unexpected Wi-Fi field.");
-    if (!wifi_credentials_forget()) return message(req, 500, "Could not forget Wi-Fi. Try again.");
-    return message(req, 200, "Saved Wi-Fi removed. The badge remains offline.");
+    if (!wifi_credentials_forget()) return message(req, 500, "Could not restore the event Wi-Fi. Try again.");
+    return message(req, 200, "Saved network removed. The badge will use the built-in event Wi-Fi and remains offline.");
   }
   if (wifi_test) {
     if (json->child) return message(req, 400, "Unexpected Wi-Fi field.");
     WifiCredentials credentials;
-    if (!wifi_credentials_load(credentials)) return message(req, 400, "Save Wi-Fi before testing it.");
+    wifi_credentials_load(credentials);
     const bool joined = station_test_connection(credentials);
     return message(req, joined ? 200 : 503, joined ? "Connected to the event Wi-Fi and received an address. Disconnected again." : "Could not join the event Wi-Fi. The badge is offline; check the network and try again.");
   }
