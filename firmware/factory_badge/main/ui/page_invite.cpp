@@ -32,7 +32,9 @@ public:
         lv_obj_set_pos(artwork_, 0, 0); // Poster starts at the shared content boundary.
         lv_obj_remove_flag(artwork_, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(artwork_, LV_OBJ_FLAG_GESTURE_BUBBLE);
-        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 40, 30, 240, 24);
+        // The expanded QR occupies the poster's exact 300px rounded frame.
+        invitation_qr_ = qr(invitation_, "https://luma.com/developers-after-dark", 10, 0, 300, 30);
+        lv_obj_set_style_radius(invitation_qr_, 16, 0);
         lv_obj_remove_flag(invitation_qr_, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_remove_flag(lv_obj_get_child(invitation_qr_, 0), LV_OBJ_FLAG_CLICKABLE);
         qr_caption_ = label(invitation_, "Tap for QR code", 0, 307, 320, &font_mono_semibold_12, muted());

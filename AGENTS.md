@@ -106,7 +106,7 @@
   NVS unlock; timed reveal must not move the current page/scroll. The actual invite
   URL is `https://luma.com/developers-after-dark`. The unlocked page centers the
   supplied 300px artwork with 16px rounded corners and `Tap for QR code` below.
-  Completed taps on artwork/caption toggle a centered 240px live QR with
+  Completed taps on artwork/caption toggle a live QR in the artwork's 300px rounded frame with
   `Tap to return`. No vertical scrolling; drags/holds must not toggle it. The native 450ms slide follows the
   three-word reveal, with both artwork and QR hidden during those words. See
   `docs/conference-badge.md` for timing and persistence rules.

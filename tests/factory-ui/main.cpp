@@ -160,7 +160,9 @@ void assert_invitation_qr(bool visible) {
     auto* code = find_qr(lv_display_get_screen_active(lv_display_get_default()));
     assert(code);
     assert(lv_obj_is_visible(code) == visible);
-    assert(lv_obj_get_width(lv_obj_get_parent(code)) == 240);
+    auto* frame = lv_obj_get_parent(code);
+    assert(lv_obj_get_width(frame) == 300 && lv_obj_get_height(frame) == 300);
+    assert(lv_obj_get_x(frame) == 10 && lv_obj_get_y(frame) == 0); // Same frame as the poster.
 }
 lv_obj_t* find_gif(lv_obj_t* object) {
     if (lv_obj_check_type(object, &lv_gif_class)) return object;

@@ -39,7 +39,7 @@ persistent `conference_ui/after_dark_v1` unlock (`0xA1`, cleared by confirmed ba
 reset) and fixed October 7, 2026 at 13:30 local clock policy. Ordinary pushers are
 only navigation/setup controls.
 The unlocked invitation centers the supplied event artwork in a native 16px rounded
-clipping container. `Tap for QR code` toggles a centered 240px QR; a second tap
+clipping container. `Tap for QR code` toggles a QR occupying the same 300px rounded frame; a second tap
 returns to the poster. The QR opens https://luma.com/developers-after-dark with a four-module quiet zone.
 Artwork/QR remain hidden while locked and during the three-word reveal. This supersedes
 the earlier hidden-page/physical-pusher interaction without changing saved unlocks.

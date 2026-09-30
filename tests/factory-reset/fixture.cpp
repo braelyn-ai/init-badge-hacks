@@ -3,6 +3,7 @@
 #include "conference_settings.h"
 #include "schedule_bookmarks.h"
 #include "after_dark_unlock.h"
+#include "wifi_config.h"
 #include <cassert>
 #include <cstdio>
 #include <map>
@@ -21,6 +22,8 @@ bool profile_reset_request(std::string& error) {
     if (!accept_request) { error = "Synthetic unavailable worker"; return false; }
     error.clear(); result = {ProfileResetState::Pending, {}}; return true;
 }
+unsigned wifi_forgets = 0;
+bool wifi_credentials_forget() { ++wifi_forgets; return true; }
 }
 namespace board {
 int applied_brightness = -1;
@@ -99,6 +102,7 @@ void assert_defaults() {
     assert(durable.at("prefs") == defaults.encoded());
     assert(durable.at("network") == 0 && durable.at("agenda_saved") == empty.encoded());
     assert(model.selected_network == 0 && networkSaveAt == 0);
+    assert(badge::wifi_forgets > 0);
     assert(board::applied_brightness == 60 && rotationPending);
     assert(model.reset_state == badge::ResetState::Complete && !resetRequested && !resetNeedsPreferences);
     assert(!afterDark.unlocked() && !afterDark.pending() && !afterDark.saveDue(10000));

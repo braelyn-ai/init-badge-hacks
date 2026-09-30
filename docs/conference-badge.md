@@ -632,6 +632,16 @@ USB-simulated completed taps opened the official QR, which decoded within the
 round-screen mask, then restored the poster framebuffer byte-for-byte. The badge
 was left on the rounded poster. Physical finger interaction was not measured.
 
+September 30 legibility update: the poster source is the user-supplied 2400×2400
+artwork (same wording, date and venue), downsampled to the unchanged 300×300
+RGB565 asset. The expanded QR now occupies the poster's exact 300px, 16px-radius
+frame (x=10, y=0 within the invitation) with a 30px quiet zone, instead of a
+centered 240px square. Host checks, the ESP32 build and a guarded flash passed
+(`UNIT_READY`, no storage initialization). A USB-simulated tap on the device
+showed the QR, which decoded within the round-screen mask, and a second tap restored the
+poster byte-for-byte. Physical finger interaction and scanning with a phone were
+not tested.
+
 
 ### September 28 simplified schedule design
 
