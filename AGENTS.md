@@ -50,15 +50,18 @@
   physical/horizontal paging and tap-to-QR. Do not substitute the mockup's sample
   QR for real phone credentials or a pending invitation destination.
 - Normal operation has Wi-Fi and Bluetooth off. Temporary setup offers manual
-  name/social fields, image upload, and event Wi-Fi settings. The open event
+  name/social fields and event Wi-Fi settings (no phone photo upload). The open event
   network `init() attendee` is compiled in as the default; any other network is a
   runtime-only NVS override. Never put personal or test Wi-Fi in source, firmware
   or Git. Saving a network never joins it; an explicit test or future fetch/refresh may join briefly and
-  must disconnect when the action ends. Phone setup has one Save badge and three
-  selects: Wi-Fi (event or another network), one social account (from
+  must disconnect when the action ends. Phone setup is a numbered form (01 You, 02 Profile, 03 Wi-Fi) styled after
+  workos.com/init/badge, with one Save badge and two selects: Wi-Fi (event or
+  another network) and one social account (from
   `main/social_networks.h`: LinkedIn, X, GitHub, Hugging Face or YouTube with a
   username, or Other (URL) with an https link; it is the QR, and the photo
-  source when the network or link matches one of the relay's providers), and Photo (from that network, upload, keep, none). Profile records
+  source when the network or link matches one of the relay's providers). There
+  is no photo step: Save downloads the account's photo when the badge has none
+  or the account changed, and a changed account first drops the old photo. Profile records
   are v3 (name, network key, handle, company); v1/v2 three-URL records are read
   and their first filled slot becomes the account. The relay's route table must
   equal the firmware's `Providers` (tested on both sides). The network photo queues one unauthenticated GET of `avatar.chan.dev/v1/<network>/<handle>`

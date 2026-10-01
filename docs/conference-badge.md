@@ -864,3 +864,15 @@ matches a provider's profile form: the five named networks or Bluesky
 Threads; otherwise the badge keeps the QR only and setup says so. The gray QR
 label is the network, the recognized provider, or the link's host. The relay
 still serves all ten providers.
+
+### October 1 simplified setup form
+
+The setup page follows workos.com/init/badge: `#0B0B0E` background, cream text,
+uppercase mono eyebrow/labels, a large sans heading, numbered steps divided by
+hairlines (01 You, 02 Profile, 03 Wi-Fi), a cream Save badge and an outlined
+Cancel. System fonts stand in for Suisse because the page is served offline. The
+clock sync is a one-line status with a "Sync again" link. The Photo step and
+phone upload were removed, along with the `/image` endpoint and staging: Save
+downloads the account's photo after setup when the badge has none or the
+account changed, and a changed account first clears the old photo. Unrecognized
+Other links stay QR-only.

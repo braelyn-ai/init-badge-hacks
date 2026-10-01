@@ -17,14 +17,14 @@ struct Form {
 };
 void check_form(){
  badge::Profile previous;previous.company="Keep this company";badge::Profile candidate;std::string error;
- Form legacy{{"name","  Sample Attendee  "},{"network","github"},{"handle","https://github.com/example"},{"image","keep"},{"imageToken",""}};
+ Form legacy{{"name","  Sample Attendee  "},{"network","github"},{"handle","https://github.com/example"}};
  assert(badge::profile_form(&legacy.root,previous,candidate,error));
  assert(candidate.name=="Sample Attendee"&&candidate.company==previous.company&&candidate.network==badge_social::find("github")&&candidate.handle=="example");
- Form account{{"name","Sample"},{"network","url"},{"handle","bsky.app/profile/Chantastic"},{"image","keep"},{"imageToken",""}};
+ Form account{{"name","Sample"},{"network","url"},{"handle","bsky.app/profile/Chantastic"}};
  assert(badge::profile_form(&account.root,previous,candidate,error)&&candidate.network==badge_social::find("url")&&candidate.handle=="https://bsky.app/profile/Chantastic");
  account.fields[2].valuestring="not a link!";assert(!badge::profile_form(&account.root,previous,candidate,error)&&error.find("https://")!=std::string::npos);
  account.fields[1].valuestring="myspace";account.fields[2].valuestring="tom";assert(!badge::profile_form(&account.root,previous,candidate,error));
- Form full{{"name","Sample"},{"network","github"},{"handle",""},{"image","keep"},{"imageToken",""},{"company","  Research & Development  "}};
+ Form full{{"name","Sample"},{"network","github"},{"handle",""},{"company","  Research & Development  "}};
  assert(badge::profile_form(&full.root,previous,candidate,error)&&candidate.company=="Research & Development");
  assert(candidate.network==-1&&candidate.handle.empty()); // A blank username stores no account.
  auto company=&full.fields.back();company->valuestring="";
@@ -39,7 +39,7 @@ void check_form(){
  company->string="company";company->valuestring="Good";
  cJSON duplicate{"company","Another"};company->next=&duplicate;assert(!badge::profile_form(&full.root,previous,candidate,error));company->next=nullptr;
  full.fields[0].type=2;assert(!badge::profile_form(&full.root,previous,candidate,error));full.fields[0].type=1;
- auto imageToken=full.fields[4].string;full.fields[4].string="company";assert(!badge::profile_form(&full.root,previous,candidate,error));full.fields[4].string=imageToken;
+ auto handleKey=full.fields[2].string;full.fields[2].string="image";assert(!badge::profile_form(&full.root,previous,candidate,error));full.fields[2].string=handleKey; // Retired photo fields are refused.
 }
 void check_networks(){
  // Five named networks plus Other (URL); each accepts a handle, @handle or profile URL.
@@ -142,8 +142,6 @@ void check_reset(const std::vector<uint8_t>& jpeg){
  for(bool* busy:{&badge::portal.active,&badge::portal.starting,&badge::requested,&badge::running}){
   *busy=true;assert(!badge::profile_reset_request(error)&&!error.empty());*busy=false;unchanged();
  }
- badge::staged_image={1,2,3};assert(!badge::profile_reset_request(error));badge::staged_image.clear();
- badge::staged_token="staged";assert(!badge::profile_reset_request(error));badge::staged_token.clear();
  badge::service_task=nullptr;assert(!badge::profile_reset_request(error));badge::service_task=reinterpret_cast<void*>(1);
  badge::stored.ready=false;assert(!badge::profile_reset_request(error));badge::stored.ready=true;
  assert(badge::profile_reset_snapshot().state==State::Idle);unchanged();

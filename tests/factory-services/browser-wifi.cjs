@@ -30,7 +30,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(element('wifiFields').hidden, false);
   assert.deepEqual(calls.map(c => c.path), ['/clock'], 'Choosing a network never contacts the badge');
   element('wifiSsid').value = 'Home network'; element('wifiPassword').value = 'temporary-pass';
-  element('name').value = 'Synthetic Attendee'; element('photoSource').value = 'keep';
+  element('name').value = 'Synthetic Attendee';
   await element('form').listeners.submit({ preventDefault() {} }); await settle();
   let save = calls.at(-1);
   assert.equal(save.path, '/save');

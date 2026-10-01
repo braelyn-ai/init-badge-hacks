@@ -49,6 +49,4 @@ labels = dict(re.findall(r"([a-z]+):'([^']+)'", re.search(r"const networkNames=\
 assert options == table and labels == dict(table), (options, labels, table)
 run("node", ROOT / "tests/conference-profile-host/browser-clock.cjs", OUT / "portal.js")
 run("node", HERE / "browser-profile.cjs", OUT / "portal.js")
-run("node", HERE / "browser-photo-source.cjs", OUT / "portal.js")
 run("node", HERE / "browser-wifi.cjs", OUT / "portal.js")
-run("node", HERE / "browser-photo.cjs", OUT / "portal.js")

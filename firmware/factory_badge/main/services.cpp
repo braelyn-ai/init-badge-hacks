@@ -32,7 +32,7 @@
 namespace badge {
 namespace {
 constexpr size_t kHeader = 64, kMetadata = 768, kAvatarSide = 160;
-constexpr size_t kAvatarBytes = kAvatarSide * kAvatarSide * 2, kImageLimit = 128 * 1024;
+constexpr size_t kAvatarBytes = kAvatarSide * kAvatarSide * 2;
 constexpr char kRoot[] = "/badgefs", kRecord[] = "/badgefs/conference-manual-v1.bin";
 constexpr char kTemporary[] = "/badgefs/conference-manual-v1.tmp";
 constexpr uint8_t kMagic[8] = {'I','N','I','T','C','F','0','1'};
@@ -59,8 +59,7 @@ esp_netif_t* ap_netif = nullptr;
 esp_netif_t* station_netif = nullptr;
 httpd_handle_t server = nullptr;
 int dns_socket = -1;
-std::string session_nonce, staged_token;
-std::vector<uint8_t> staged_image;
+std::string session_nonce;
 int64_t expires_at = 0, closes_at = 0;
 
 int64_t monotonic_ms() { return esp_timer_get_time() / 1000; }
@@ -223,10 +222,8 @@ bool reset_pending() {
   return reset_state.state == ProfileResetState::Pending || reset_state.state == ProfileResetState::Running;
 }
 bool reset_setup_busy() {
-  // Call only under portal_mutex. Short-circuit before inspecting staging while
-  // HTTP may own it. An inactive portal has joined HTTP and cleared staging.
-  return portal.active || portal.starting || requested || running ||
-         !staged_image.empty() || !staged_token.empty();
+  // Call only under portal_mutex.
+  return portal.active || portal.starting || requested || running;
 }
 bool queue_profile_reset(std::string& error) {
   std::lock_guard<std::mutex> lock(portal_mutex);
@@ -276,15 +273,12 @@ std::string page() {
   // Replace tokens in reverse document order so attendee text inserted earlier
   // in the page can never be matched as a later token.
   replace_token(html, "{{NONCE}}", session_nonce);
-  replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
-  replace_token(html, "{{PHOTO_CHOICE}}", current.avatar ? "keep" : "network");
+  replace_token(html, "{{WIFI_SSID}}", escape(custom ? wifi.ssid : std::string()));
+  replace_token(html, "{{WIFI_CHOICE}}", custom ? "other" : "event");
   replace_token(html, "{{HANDLE}}", escape(current.profile.handle));
   replace_token(html, "{{NETWORK}}", badge_social::Networks[network].key);
   replace_token(html, "{{COMPANY}}", escape(current.profile.company));
   replace_token(html, "{{NAME}}", escape(current.profile.name));
-  replace_token(html, "{{WIFI_STATUS}}", custom ? "This badge has a different network saved." : "Using the built-in event Wi-Fi.");
-  replace_token(html, "{{WIFI_SSID}}", escape(custom ? wifi.ssid : std::string()));
-  replace_token(html, "{{WIFI_CHOICE}}", custom ? "other" : "event");
   return html;
 }
 const char* status_text(int status) { switch (status) { case 200: return "200 OK"; case 400: return "400 Bad Request"; case 403: return "403 Forbidden";
@@ -316,8 +310,8 @@ bool json_fields(cJSON* root, const std::vector<const char*>& allowed) {
   return true;
 }
 bool profile_form(cJSON* root, const Profile& previous, Profile& candidate, std::string& error) {
-  const char* fields[] = {"name", "network", "handle", "image", "imageToken"};
-  if (!json_fields(root, {fields[0], fields[1], fields[2], fields[3], fields[4], "company", "ssid", "password"})) {
+  const char* fields[] = {"name", "network", "handle"};
+  if (!json_fields(root, {fields[0], fields[1], fields[2], "company", "ssid", "password"})) {
     error = "Unexpected form field."; return false;
   }
   for (auto field : fields) if (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(root, field))) {
@@ -461,14 +455,14 @@ WifiFetchSnapshot fetch_once(const WifiCredentials& credentials, int photo_netwo
   return result;
 }
 esp_err_t handle_post(httpd_req_t* req) {
-  const bool image = !strcmp(req->uri, "/image"), clock = !strcmp(req->uri, "/clock"), cancel = !strcmp(req->uri, "/cancel"), save = !strcmp(req->uri, "/save");
-  if (!(image || clock || cancel || save)) return message(req, 400, "Unknown request.");
+  const bool clock = !strcmp(req->uri, "/clock"), cancel = !strcmp(req->uri, "/cancel"), save = !strcmp(req->uri, "/save");
+  if (!(clock || cancel || save)) return message(req, 400, "Unknown request.");
   std::string nonce, type;
   if (!session_open() || !header(req, "X-Conference-Nonce", nonce, 32) || nonce != session_nonce) return message(req, 403, "Open the current badge setup page.");
-  if (httpd_req_get_hdr_value_len(req, "Transfer-Encoding") || req->content_len == 0 || req->content_len > (image ? kImageLimit : 2048)) return message(req, 413, "Request is too large or unsupported.");
-  if (!header(req, "Content-Type", type, 80) || (image ? type != "image/jpeg" : type != "application/json")) return message(req, 415, "Unsupported request format.");
+  if (httpd_req_get_hdr_value_len(req, "Transfer-Encoding") || req->content_len == 0 || req->content_len > 2048) return message(req, 413, "Request is too large or unsupported.");
+  if (!header(req, "Content-Type", type, 80) || type != "application/json") return message(req, 415, "Unsupported request format.");
   std::unique_ptr<uint8_t, decltype(&heap_caps_free)> bytes(static_cast<uint8_t*>(heap_caps_malloc(req->content_len + 1, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)), heap_caps_free);
-  if (!bytes) return message(req, 503, "Not enough memory. Try a smaller image.");
+  if (!bytes) return message(req, 503, "Not enough memory. Try again.");
   const int64_t deadline = monotonic_ms() + 10000; size_t used = 0;
   while (used < req->content_len) {
     if (!session_open() || monotonic_ms() >= deadline) return ESP_FAIL;
@@ -478,15 +472,6 @@ esp_err_t handle_post(httpd_req_t* req) {
     used += n;
   }
   bytes.get()[used] = 0;
-  if (image) {
-    staged_image.clear(); staged_token.clear(); int w = 0, h = 0;
-    auto rgb = badgeDecodeAvatarJpeg(bytes.get(), used, w, h);
-    if (!rgb) return message(req, 400, "Use a JPEG up to 512 by 512 and 128 KiB.");
-    badgeFreeAvatarPixels(rgb); staged_image.assign(bytes.get(), bytes.get() + used); staged_token = random_hex(8);
-    cJSON* result = cJSON_CreateObject(); if (!result) return ESP_FAIL;
-    cJSON_AddStringToObject(result, "message", "Photo ready. Save badge to keep it."); cJSON_AddStringToObject(result, "imageToken", staged_token.c_str());
-    auto sent = json_reply(req, 200, result); cJSON_Delete(result); return sent;
-  }
   // cJSON uses NUL-terminated strings. Refuse embedded NUL encodings before
   // parsing so fields cannot silently acquire truncated values.
   if (memchr(bytes.get(), 0, used) || strstr(reinterpret_cast<char*>(bytes.get()), "\\u0000")) return message(req, 400, "Invalid form characters.");
@@ -519,7 +504,6 @@ esp_err_t handle_post(httpd_req_t* req) {
   }
   Profile candidate; std::string error;
   if (!profile_form(json.get(), profile_snapshot().profile, candidate, error)) return message(req, 400, error);
-  auto value = [&](const char* key) { return cJSON_GetObjectItemCaseSensitive(json.get(), key)->valuestring; };
   // Wi-Fi is saved with the badge. The page never receives the saved password,
   // so an unchanged network name with a blank password keeps the saved network.
   WifiCredentials wifi; wifi_credentials_load(wifi);
@@ -533,31 +517,23 @@ esp_err_t handle_post(httpd_req_t* req) {
       wifi = std::move(next); wifi_changed = true;
     }
   }
-  std::string action = value("image"); bool replace = false; const uint8_t* jpeg = nullptr; size_t jpeg_size = 0;
   // "network" downloads the account's photo after setup; "auto" does so only
   // when there is no saved photo yet.
-  // An Other link without a recognized provider stays QR-only.
-  int source = -1;
+  // Photos come only from the account. A changed account drops the previous
+  // account's photo; the new one downloads after setup closes when there is
+  // none yet and the network (or an Other link) has a photo provider.
+  const auto previous = profile_snapshot();
+  const bool changed = previous.profile.network != candidate.network || previous.profile.handle != candidate.handle;
+  const bool replace = changed && previous.avatar;
   const auto photo = badge_social::photo_source(candidate.network, candidate.handle);
-  bool qr_only = false;
-  if (action == "auto") { action = "keep"; if (!profile_snapshot().avatar && photo.provider) source = candidate.network; }
-  else if (action == "network") {
-    if (candidate.network < 0) return message(req, 400, "Add your username to use its photo.");
-    if (photo.provider) source = candidate.network;
-    else { action = "keep"; qr_only = true; }
-  }
-  if (source < 0 && action == "remove") replace = true;
-  else if (source < 0 && action == "staged") { if (staged_image.empty() || staged_token != value("imageToken")) return message(req, 400, "Upload your photo again before saving."); replace = true; jpeg = staged_image.data(); jpeg_size = staged_image.size(); }
-  else if (source < 0 && action != "keep") return message(req, 400, "Invalid photo choice.");
+  const int source = photo.provider && (changed || !previous.avatar) ? candidate.network : -1;
   if (wifi_changed && !wifi_credentials_save(wifi)) return message(req, 500, "Could not save Wi-Fi. Try again.");
-  if (!save_record(candidate, jpeg, jpeg_size, replace, error)) return message(req, 500, error);
-  // The current photo stays until the new one downloads after setup closes.
+  if (!save_record(candidate, nullptr, 0, replace, error)) return message(req, 500, error);
   const bool queued = source >= 0 && photo_fetch_request(source);
-  auto result = message(req, 200, qr_only ? "Saved. Your link is your badge QR code; the badge can't get a photo from it, so upload one if you like."
-    : source < 0 ? "Saved on your badge. You may close this page; setup Wi-Fi will turn off."
+  auto result = message(req, 200, source < 0 ? std::string("Saved on your badge. You may close this page; setup Wi-Fi will turn off.")
     : queued ? "Saved. When setup closes, the badge joins " + wifi.ssid + ", gets your " + photo.label + " photo, then turns Wi-Fi off."
-    : "Saved, but the photo download could not be queued. Open setup again to retry.");
-  staged_image.clear(); staged_token.clear(); finish_session(PortalOutcome::Saved); return result;
+    : std::string("Saved, but the photo download could not be queued. Open setup again to retry."));
+  finish_session(PortalOutcome::Saved); return result;
 }
 bool start_network() {
   PortalSnapshot state; { std::lock_guard<std::mutex> lock(portal_mutex); state = portal; }
@@ -587,7 +563,7 @@ void stop_network() {
   if (server) { httpd_stop(server); server = nullptr; }
   if (dns_socket >= 0) { close(dns_socket); dns_socket = -1; }
   esp_wifi_stop(); esp_wifi_deinit();
-  staged_image.clear(); staged_image.shrink_to_fit(); staged_token.clear(); session_nonce.clear();
+  session_nonce.clear();
 }
 void dns_tick() {
   uint8_t packet[512]; sockaddr_in client = {}; socklen_t length = sizeof(client);
