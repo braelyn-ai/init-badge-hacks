@@ -12,7 +12,8 @@ h2{font-size:20px;line-height:1.3;font-weight:500;margin:0}
 .step{position:relative;border-top:1px solid rgba(230,234,242,.14);padding:24px 0}
 .num{position:absolute;top:28px;right:0;font-size:13px;color:#96969c}h2{padding-right:40px}
 label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#96969c;margin:18px 0 6px}
-input,select{width:100%;height:48px;padding:0 14px;border:1px solid rgba(230,234,242,.28);border-radius:2px;background:#131318;color:#f5f2e8;font:inherit}
+input,select{width:100%;height:48px;padding:0 14px;border:1px solid rgba(230,234,242,.28);border-radius:2px;background-color:#131318;color:#f5f2e8;font:inherit}
+select{-webkit-appearance:none;appearance:none;padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%2396969c' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
 button{display:block;width:100%;height:48px;margin-top:12px;border:1px solid rgba(230,234,242,.28);border-radius:2px;background:transparent;color:#f5f2e8;font-size:14px;letter-spacing:.1em;text-transform:uppercase}
 button.primary{background:#f5f2e8;border-color:#f5f2e8;color:#0b0b0e}button:disabled{opacity:.45}
 button.text{display:inline;width:auto;height:auto;margin:0 0 0 6px;padding:0;border:0;font:inherit;letter-spacing:0;text-transform:none;text-decoration:underline;color:#96969c}
