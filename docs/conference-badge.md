@@ -809,3 +809,16 @@ the fetch was garbled, consistent with bytes dropped from the USB capture stream
 while Wi-Fi was active; the capture afterward was clean. The physical screen
 during the fetch was not observed. The badge was reset to stock again afterward.
 The phone-driven path was covered by host checks only.
+
+### October 1 setup selects
+
+The setup page now asks for one social account: a **Social network** select
+(GitHub, X, LinkedIn) and a **Username**. Saving fills that profile slot and
+clears the other two, so the Badge page shows one card whose QR opens that
+profile (cards without an account are hidden; older multi-account records still
+show each filled card). **Photo** is a select: From my social network (default
+without a saved photo), Upload from this phone (reveals the upload controls),
+Keep current photo (default with one) or No photo. **Wi-Fi** is a select: Event
+Wi-Fi (default) or Another network, which reveals name and password. Prefill uses
+the first saved account; template tokens are substituted in reverse document
+order. Host checks cover the scripts; a real phone had not yet been tried.

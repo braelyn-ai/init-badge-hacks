@@ -1052,8 +1052,10 @@ int main(int argc, char** argv) {
 
     badge::ui_page(2);
     spin();
+    const int network_before = network;
     swipe(234, 338, 234, 160);
-    assert(network > 0 && badge::ui_page_index() == 3);
+    // A badge without an account shows one card, so a swipe cannot switch networks.
+    assert(network == network_before && badge::ui_page_index() == 3);
     // Populate each social independently; the current card must remain selected.
     model.name = "Conference attendee";
     model.company = "WorkOS";
@@ -1081,16 +1083,14 @@ int main(int argc, char** argv) {
     assert_chrome(false, true);
     assert_idle();
 
-    // Programmatic selection goes to the third, unconfigured social card.
+    // Unconfigured networks have no card, even when selected programmatically.
     model.selected_network = 2;
     badge::ui_update(model);
     spin();
     tap(234, 280);
-    assert(find_label(lv_display_get_screen_active(display), "No account yet"));
-    tap_text("Tap to configure");
-    assert(badge::ui_setup_active() && setup == 2);
-    badge::ui_close_setup(true);
-    spin();
+    assert(!find_label(lv_display_get_screen_active(display), "No account yet"));
+    assert(find_label(lv_display_get_screen_active(display), "Tap to close"));
+    tap(234, 230);
     assert(badge::ui_page_index() == 3 && !badge::ui_setup_active());
     assert_chrome(false, true);
 

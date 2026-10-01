@@ -1,6 +1,6 @@
 #pragma once
 // Local-only portal retained from the Arduino conference UI. No external assets.
-static constexpr char BADGE_PORTAL_HTML[] = R"HTML(<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>init() badge setup</title><style>body{font:17px system-ui;background:#101114;color:#fff;max-width:460px;margin:25px auto;padding:24px}h1{font-size:32px}label{display:block;margin:22px 0 7px}input,select,button{box-sizing:border-box;width:100%;padding:14px;border-radius:10px;border:1px solid #666;font:inherit}input,select{background:#24262b;color:#fff}button{margin-top:20px;background:#fff;color:#111;font-weight:650}button.secondary{background:#24262b;color:#fff}p{color:#ccc;line-height:1.5}.row{display:flex;gap:10px;align-items:center}.row input{width:auto}#status{min-height:3em;white-space:pre-wrap}small{color:#bbb}button:disabled{opacity:.5}#photoPreview{display:block;width:160px;height:160px;margin:14px 0;border:1px solid #666}#photoPreview[hidden]{display:none}a{color:#bdb5ff}</style></head><body><p>init() / local badge setup</p><h1>Set up your badge</h1><p>Profile details stay on this badge. No account or sign-in is needed. Blank social accounts stay available as placeholders.</p><section aria-labelledby="clockHeading"><h2 id="clockHeading">Clock</h2><p id="clockStatus" role="status" aria-live="polite">Syncing the clock from this browser…</p><button id="clockRetry" type="button" class="secondary">Sync clock again</button><small>Clock updates are kept even if you cancel profile edits. Reopen setup after a timezone or daylight-saving change.</small></section><section aria-labelledby="wifiHeading"><h2 id="wifiHeading">Event Wi-Fi</h2><p>The event network is built in. Change it only if you need to; it is saved with Save badge. Wi-Fi stays off except while the badge downloads your photo.</p><label for="wifiSsid">Network name</label><input id="wifiSsid" maxlength="32" autocomplete="off" value="{{WIFI_SSID}}"><label for="wifiPassword">Password (blank keeps the saved one; open Wi-Fi needs none)</label><input id="wifiPassword" type="password" maxlength="63" autocomplete="off"><button id="wifiForget" type="button" class="secondary">Use event Wi-Fi</button><p id="wifiStatus" role="status" aria-live="polite">{{WIFI_STATUS}}</p></section><form id="form"><label for="name">Display name</label><input id="name" maxlength="120" autocomplete="off" value="{{NAME}}"><label for="company">Company (optional)</label><input id="company" maxlength="120" autocomplete="organization" value="{{COMPANY}}"><label for="github">GitHub handle or profile URL</label><input id="github" maxlength="180" autocomplete="off" value="{{GITHUB}}"><label for="x">X / Twitter handle or profile URL</label><input id="x" maxlength="180" autocomplete="off" value="{{X}}"><label for="linkedin">LinkedIn handle or /in/ profile URL</label><input id="linkedin" maxlength="180" autocomplete="off" value="{{LINKEDIN}}"><label for="photoSource">Photo</label><select id="photoSource"><option value="auto" selected>Automatic: my GitHub, X or LinkedIn photo if I have none</option><option value="github">Use my GitHub photo</option><option value="x">Use my X photo</option><option value="linkedin">Use my LinkedIn photo</option></select><small>The badge downloads the photo over Wi-Fi after setup closes, then turns Wi-Fi off.</small><label for="photo">Or upload a photo</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"><canvas id="photoPreview" width="160" height="160" hidden role="img" aria-label="Square crop of your selected photo"></canvas><p id="photoState" role="status" aria-live="polite">{{PHOTO}}</p><button id="discardPhoto" type="button" class="secondary" hidden>Cancel photo change</button><small>Choose a photo saved on this phone. You will see its square crop before saving. JPEG, PNG, WebP and supported HEIC photos are converted locally; nothing is sent until Save badge.</small><p><small>Photo chooser not opening? Stay on the badge Wi-Fi, then open <a href="http://192.168.4.1/">http://192.168.4.1</a> in Safari or Chrome.</small></p><label class="row"><input id="remove" type="checkbox">Remove saved photo</label><button id="save" type="submit">Save badge</button><small>Saves your profile, photo choice and Wi-Fi together.</small><button id="cancel" type="button" class="secondary">Cancel setup</button></form><p id="status" role="status" aria-live="polite"></p><script>
+static constexpr char BADGE_PORTAL_HTML[] = R"HTML(<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>init() badge setup</title><style>body{font:17px system-ui;background:#101114;color:#fff;max-width:460px;margin:25px auto;padding:24px}h1{font-size:32px}label{display:block;margin:22px 0 7px}input,select,button{box-sizing:border-box;width:100%;padding:14px;border-radius:10px;border:1px solid #666;font:inherit}input,select{background:#24262b;color:#fff}button{margin-top:20px;background:#fff;color:#111;font-weight:650}button.secondary{background:#24262b;color:#fff}p{color:#ccc;line-height:1.5}.row{display:flex;gap:10px;align-items:center}.row input{width:auto}#status{min-height:3em;white-space:pre-wrap}small{color:#bbb}button:disabled{opacity:.5}#photoPreview{display:block;width:160px;height:160px;margin:14px 0;border:1px solid #666}#photoPreview[hidden]{display:none}a{color:#bdb5ff}</style></head><body><p>init() / local badge setup</p><h1>Set up your badge</h1><p>Profile details stay on this badge. No account or sign-in is needed. Blank social accounts stay available as placeholders.</p><section aria-labelledby="clockHeading"><h2 id="clockHeading">Clock</h2><p id="clockStatus" role="status" aria-live="polite">Syncing the clock from this browser…</p><button id="clockRetry" type="button" class="secondary">Sync clock again</button><small>Clock updates are kept even if you cancel profile edits. Reopen setup after a timezone or daylight-saving change.</small></section><section aria-labelledby="wifiHeading"><h2 id="wifiHeading">Event Wi-Fi</h2><p>Wi-Fi stays off except while the badge downloads your photo.</p><label for="wifiChoice">Network</label><select id="wifiChoice" data-initial="{{WIFI_CHOICE}}"><option value="event">Event Wi-Fi (init() attendee)</option><option value="other">Another network</option></select><div id="wifiFields" hidden><label for="wifiSsid">Network name</label><input id="wifiSsid" maxlength="32" autocomplete="off" value="{{WIFI_SSID}}"><label for="wifiPassword">Password (blank keeps the saved one; open Wi-Fi needs none)</label><input id="wifiPassword" type="password" maxlength="63" autocomplete="off"></div><p id="wifiStatus" role="status" aria-live="polite">{{WIFI_STATUS}}</p></section><form id="form"><label for="name">Display name</label><input id="name" maxlength="120" autocomplete="off" value="{{NAME}}"><label for="company">Company (optional)</label><input id="company" maxlength="120" autocomplete="organization" value="{{COMPANY}}"><label for="network">Social network</label><select id="network" data-initial="{{NETWORK}}"><option value="github">GitHub</option><option value="x">X</option><option value="linkedin">LinkedIn</option></select><label for="handle">Username</label><input id="handle" maxlength="180" autocomplete="off" autocapitalize="none" value="{{HANDLE}}"><small>Your badge QR code opens this profile.</small><label for="photoSource">Photo</label><select id="photoSource" data-initial="{{PHOTO_CHOICE}}"><option value="network">From my social network</option><option value="upload">Upload from this phone</option><option value="keep">Keep current photo</option><option value="remove">No photo</option></select><div id="uploadArea" hidden><input id="photo" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"><canvas id="photoPreview" width="160" height="160" hidden role="img" aria-label="Square crop of your selected photo"></canvas><button id="discardPhoto" type="button" class="secondary" hidden>Cancel photo change</button><small>Choose a photo saved on this phone. You will see its square crop before saving. JPEG, PNG, WebP and supported HEIC photos are converted locally; nothing is sent until Save badge.</small><p><small>Photo chooser not opening? Stay on the badge Wi-Fi, then open <a href="http://192.168.4.1/">http://192.168.4.1</a> in Safari or Chrome.</small></p></div><p id="photoState" role="status" aria-live="polite">{{PHOTO}}</p><button id="save" type="submit">Save badge</button><small>Saves your profile, photo choice and Wi-Fi together.</small><button id="cancel" type="button" class="secondary">Cancel setup</button></form><p id="status" role="status" aria-live="polite"></p><script>
 'use strict';
 const nonce='{{NONCE}}';
 const $=id=>document.getElementById(id);
@@ -10,7 +10,7 @@ let busy=false,preparing=false,photoVersion=0,selectedFile=null,preparedPhoto=nu
 function state(message){$('status').textContent=message}
 function controls(){
   $('save').disabled=busy||preparing||!!photoFailure;
-  for(const id of ['cancel','clockRetry','name','company','github','x','linkedin','photoSource','photo','remove','discardPhoto','wifiSsid','wifiPassword','wifiForget'])$(id).disabled=busy;
+  for(const id of ['cancel','clockRetry','name','company','network','handle','photoSource','photo','discardPhoto','wifiChoice','wifiSsid','wifiPassword'])$(id).disabled=busy;
 }
 function lock(value){busy=value;controls()}
 async function request(path,body,type='application/json'){
@@ -129,25 +129,28 @@ async function photo(file,isCurrent=()=>true){
     throw Error('This photo is too detailed. Try a smaller photo or a screenshot.');
   }finally{decoded.release();canvas.width=canvas.height=0}
 }
-const photoSources={github:'GitHub',x:'X',linkedin:'LinkedIn'};
-function choosePhotoSource(){
-  const source=$('photoSource').value;
+const networkNames={github:'GitHub',x:'X',linkedin:'LinkedIn'};
+function photoMode(){return $('photoSource').value||'network'}
+function resetUpload(){
   ++photoVersion;selectedFile=null;preparedPhoto=null;photoFailure='';preparing=false;
-  $('photo').value='';$('remove').checked=false;$('photoPreview').hidden=true;$('discardPhoto').hidden=true;
-  $('photoState').textContent=photoSources[source]?'After Save badge, the badge will get your '+photoSources[source]+' photo.':originalPhotoMessage;controls();
+  $('photo').value='';$('photoPreview').hidden=true;$('discardPhoto').hidden=true;
 }
-function discardPhoto(){
-  ++photoVersion;selectedFile=null;preparedPhoto=null;photoFailure='';preparing=false;$('photoSource').value='auto';
-  $('photo').value='';$('remove').checked=false;$('photoPreview').hidden=true;$('discardPhoto').hidden=true;
-  $('photoState').textContent=originalPhotoMessage;controls();
+function describePhoto(){
+  const mode=photoMode();
+  $('uploadArea').hidden=mode!=='upload';
+  $('photoState').textContent=mode==='network'?'After Save badge, the badge will get your '+networkNames[$('network').value]+' photo.'
+    :mode==='upload'?'Choose a photo saved on this phone.':mode==='remove'?'The saved photo will be removed when you Save badge.':originalPhotoMessage;
 }
+function choosePhotoSource(){resetUpload();describePhoto();controls()}
+function discardPhoto(){resetUpload();describePhoto();controls()}
+function describeWifi(){$('wifiFields').hidden=$('wifiChoice').value!=='other'}
 async function selectPhoto(){
   if(busy)return;
   const file=$('photo').files[0];
   if(!file){discardPhoto();return}
   const version=++photoVersion;
-  selectedFile=file;preparedPhoto=null;photoFailure='';preparing=true;$('photoSource').value='auto';
-  $('remove').checked=false;$('photoPreview').hidden=true;$('discardPhoto').hidden=false;
+  selectedFile=file;preparedPhoto=null;photoFailure='';preparing=true;
+  $('photoPreview').hidden=true;$('discardPhoto').hidden=false;
   $('photoState').textContent='Preparing a square photo preview on this phone…';controls();
   try{
     const blob=await photo(file,()=>version===photoVersion);
@@ -164,27 +167,29 @@ function finish(message){
   ++photoVersion;preparedPhoto=null;selectedFile=null;preparing=false;
   state(message);$('form').hidden=true;$('clockRetry').disabled=true;
 }
+for(const id of ['network','photoSource','wifiChoice']){const value=$(id).dataset&&$(id).dataset.initial;if(value)$(id).value=value}
 $('photoSource').addEventListener('change',choosePhotoSource);
+$('network').addEventListener('change',describePhoto);
+$('wifiChoice').addEventListener('change',describeWifi);
 $('photo').addEventListener('change',selectPhoto);
 $('discardPhoto').addEventListener('click',discardPhoto);
-$('remove').addEventListener('change',()=>{
-  ++photoVersion;selectedFile=null;preparedPhoto=null;photoFailure='';preparing=false;$('photoSource').value='auto';
-  $('photo').value='';$('photoPreview').hidden=true;$('discardPhoto').hidden=!$('remove').checked;
-  $('photoState').textContent=$('remove').checked?'The saved photo will be removed when you Save badge.':originalPhotoMessage;
-  controls();
-});
+describePhoto();describeWifi();
 $('form').addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;
   if(preparing){state('Wait for the photo preview before saving.');return}
   if(photoFailure){state(photoFailure);return}
-  const fields={name:$('name').value,company:$('company').value,github:$('github').value,x:$('x').value,linkedin:$('linkedin').value};
-  fields.ssid=$('wifiSsid').value;fields.password=$('wifiPassword').value;
-  const source=$('photoSource').value||'auto';
-  if(photoSources[source]&&!fields[source].trim()){state('Add your '+photoSources[source]+' handle to use its photo.');return}
+  // One social account: the chosen network carries the username, the others clear.
+  const network=$('network').value||'github',handle=$('handle').value,mode=photoMode();
+  const fields={name:$('name').value,company:$('company').value,github:'',x:'',linkedin:''};
+  fields[network]=handle;
+  const eventWifi=$('wifiChoice').value!=='other';
+  fields.ssid=eventWifi?'init() attendee':$('wifiSsid').value;fields.password=eventWifi?'':$('wifiPassword').value;
+  if(mode==='network'&&!handle.trim()){state('Add your '+networkNames[network]+' username to use its photo.');return}
+  if(mode==='upload'&&!selectedFile){state('Choose a photo to upload, or pick another photo option.');return}
   lock(true);state('Saving…');
   try{
-    let image=$('remove').checked?'remove':source,imageToken='';
-    if(selectedFile&&!$('remove').checked){
+    let image=mode==='network'?network:mode==='remove'?'remove':'keep',imageToken='';
+    if(mode==='upload'){
       if(!preparedPhoto)throw Error('Choose the photo again and wait for its preview.');
       state('Sending your prepared photo to the badge…');
       const result=await request('/image',preparedPhoto,'image/jpeg');
@@ -199,10 +204,6 @@ $('cancel').addEventListener('click',async()=>{
   if(busy)return;lock(true);
   try{const result=await request('/cancel',{});finish(result.message)}
   catch(error){state(error.message+' You can also press either badge pusher to leave setup.');lock(false)}
-});
-$('wifiForget').addEventListener('click',()=>{
-  if(busy)return;$('wifiSsid').value='init() attendee';$('wifiPassword').value='';
-  $('wifiStatus').textContent='The badge will use the event Wi-Fi after Save badge.';
 });
 $('clockRetry').addEventListener('click',syncClock);
 void syncClock();

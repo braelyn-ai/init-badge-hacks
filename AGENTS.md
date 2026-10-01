@@ -54,8 +54,10 @@
   network `init() attendee` is compiled in as the default; any other network is a
   runtime-only NVS override. Never put personal or test Wi-Fi in source, firmware
   or Git. Saving a network never joins it; an explicit test or future fetch/refresh may join briefly and
-  must disconnect when the action ends. Phone setup's Photo choice (GitHub, X or
-  LinkedIn) queues one unauthenticated GET of `avatar.chan.dev/v1/<network>/<handle>`
+  must disconnect when the action ends. Phone setup has one Save badge and three
+  selects: Wi-Fi (event or another network), one social network + username (its
+  QR and photo source; other slots are cleared), and Photo (from that network,
+  upload, keep, none). The network photo queues one unauthenticated GET of `avatar.chan.dev/v1/<network>/<handle>`
   that starts only after the setup AP stops, replaces just the photo after Wi-Fi
   is off, and shows footer status. Never load authenticated identity caches
   into the manual conference model or require a cloud login.

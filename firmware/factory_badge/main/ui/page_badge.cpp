@@ -87,8 +87,12 @@ private:
         image_.data = reinterpret_cast<const uint8_t*>(avatar_);
         const bool filled = !name_.empty() || !company_.empty() || avatar_ ||
             std::any_of(urls_.begin(), urls_.end(), [](const auto& url) { return !url.empty(); });
+        // One social account per badge: show only cards with an account (the
+        // first card stands in when none is set).
+        const bool any = std::any_of(urls_.begin(), urls_.end(), [](const auto& url) { return !url.empty(); });
         for (int i = 0; i < 3; ++i) {
             auto* card = cards_[i];
+            set_hidden(card, any ? urls_[i].empty() : i != 0);
             avatar(card);
             label(card, name_.empty() ? "Your name" : name_.c_str(), 6, 172, 312, &font_mono_24);
             label(card, company_.empty() ? (filled ? "" : "Company") : company_.c_str(),

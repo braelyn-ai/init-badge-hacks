@@ -86,7 +86,8 @@ function harness(config={}){
   return {
     config,elements,element,requests,images,draws,timers,context,
     get revoked(){return revoked},get fallbacks(){return fallbacks},
-    async ready(){await settle();assert.equal(element('save').disabled,false);return this;},
+    // These scenarios exercise phone uploads, so start in Upload mode.
+    async ready(){await settle();assert.equal(element('save').disabled,false);element('photoSource').value='upload';element('photoSource').listeners.change();return this;},
     select(file){element('photo').files=file?[file]:[];return element('photo').listeners.change();},
     save(){return element('form').listeners.submit({preventDefault(){}});},
     fire(delay){for(const [id,timer] of [...timers])if(timer.delay===delay){timers.delete(id);timer.callback();}},
@@ -110,7 +111,7 @@ const saves=h=>h.requests.filter(r=>r.path==='/save');
     await h.save();
     assert.equal(uploads(h).length,1);assert.equal(uploads(h)[0].body.type,'image/jpeg');
     assert.equal(uploads(h)[0].headers['X-Conference-Nonce'],'0123456789abcdef0123456789abcdef');
-    assert.deepEqual(saves(h)[0].parsed,{name:'Synthetic Attendee',company:'Research',github:'',x:'',linkedin:'',ssid:'',password:'',image:'staged',imageToken:'0123456789abcdef'});
+    assert.deepEqual(saves(h)[0].parsed,{name:'Synthetic Attendee',company:'Research',github:'',x:'',linkedin:'',ssid:'init() attendee',password:'',image:'staged',imageToken:'0123456789abcdef'});
     assert.equal(h.element('form').hidden,true);assert.equal(h.timers.size,0);
   }
   for(const mode of [{blobUnsupported:true},{throwObjectUrl:true}]){
@@ -137,7 +138,9 @@ const saves=h=>h.requests.filter(r=>r.path==='/save');
     assert.equal(h.element('discardPhoto').hidden,false);assert(h.element('photoState').textContent.length>20);
     await h.save();assert.equal(uploads(h).length,0);assert.equal(saves(h).length,0,'Failed preparation cannot silently save without the selected photo');
     h.element('discardPhoto').listeners.click();assert.equal(h.element('save').disabled,false);
-    await h.save();assert.equal(saves(h)[0].parsed.image,'auto');assert.equal(saves(h)[0].parsed.name,'Keep my edit');
+    await h.save();assert.equal(saves(h).length,0,'Upload mode without a photo never saves');
+    h.element('photoSource').value='keep';h.element('photoSource').listeners.change();
+    await h.save();assert.equal(saves(h)[0].parsed.image,'keep');assert.equal(saves(h)[0].parsed.name,'Keep my edit');
     assert.equal(h.timers.size,0);
   }
   {
@@ -154,7 +157,7 @@ const saves=h=>h.requests.filter(r=>r.path==='/save');
   }
   {
     const h=await harness({holdDecode:true}).ready();const preparing=h.select(file());
-    h.element('remove').checked=true;h.element('remove').listeners.change();h.complete('A');await preparing;
+    h.element('photoSource').value='remove';h.element('photoSource').listeners.change();h.complete('A');await preparing;
     assert.equal(h.element('photoPreview').hidden,true);await h.save();
     assert.equal(uploads(h).length,0);assert.equal(saves(h)[0].parsed.image,'remove','Explicit removal cancels an in-flight preparation');
   }

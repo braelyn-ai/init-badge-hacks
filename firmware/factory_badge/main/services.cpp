@@ -48,7 +48,6 @@ int fetch_photo_network = -1;
 std::string fetch_photo_handle;
 bool fetch_photo_from_profile = false;
 constexpr size_t kPhotoMaxBytes = 128 * 1024; // The decoder's JPEG limit.
-constexpr const char* kPhotoNetworks[3] = {"github", "x", "linkedin"};
 ProfileResetSnapshot reset_state; // Protected by portal_mutex with AP lifecycle.
 PhoneClockSync sync_clock;
 std::atomic<bool> requested{false}, running{false};
@@ -108,6 +107,8 @@ bool social_url(unsigned network, const std::string& input, std::string& result)
   result = std::string(network == 0 ? "https://github.com/" : network == 1 ? "https://x.com/" : "https://www.linkedin.com/in/") + handle + (network == 2 ? "/" : "");
   return true;
 }
+// Network keys shared by the setup page, photo relay paths and profile slots.
+constexpr const char* kPhotoNetworks[3] = {"github", "x", "linkedin"};
 // Canonical profile URL (from social_url) back to its bare handle.
 std::string social_handle(unsigned network, const std::string& url) {
   static const char* prefixes[3] = {"https://github.com/", "https://x.com/", "https://www.linkedin.com/in/"};
@@ -272,14 +273,23 @@ void replace_token(std::string& s, const char* token, const std::string& value) 
 std::string page() {
   auto current = profile_snapshot(); std::string html = BADGE_PORTAL_HTML;
   WifiCredentials wifi; wifi_credentials_load(wifi); const bool custom = wifi_credentials_custom();
-  // Replace template tokens from the end so attendee text cannot introduce a new token.
+  // One social account: the first saved network and its bare handle.
+  int network = 0;
+  while (network < 2 && current.profile.urls[network].empty()) ++network;
+  if (current.profile.urls[network].empty()) network = 0;
+  // Replace tokens in reverse document order so attendee text inserted earlier
+  // in the page can never be matched as a later token.
   replace_token(html, "{{NONCE}}", session_nonce);
   replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
-  replace_token(html, "{{WIFI_SSID}}", escape(wifi.ssid));
+  replace_token(html, "{{PHOTO_CHOICE}}", current.avatar ? "keep" : "network");
+  replace_token(html, "{{HANDLE}}", escape(social_handle(network, current.profile.urls[network])));
+  replace_token(html, "{{NETWORK}}", kPhotoNetworks[network]);
+  replace_token(html, "{{COMPANY}}", escape(current.profile.company));
+  replace_token(html, "{{NAME}}", escape(current.profile.name));
   replace_token(html, "{{WIFI_STATUS}}", custom ? "This badge has a different network saved." : "Using the built-in event Wi-Fi.");
-  replace_token(html, "{{LINKEDIN}}", escape(current.profile.urls[2])); replace_token(html, "{{X}}", escape(current.profile.urls[1]));
-  replace_token(html, "{{GITHUB}}", escape(current.profile.urls[0])); replace_token(html, "{{COMPANY}}", escape(current.profile.company));
-  replace_token(html, "{{NAME}}", escape(current.profile.name)); return html;
+  replace_token(html, "{{WIFI_SSID}}", escape(custom ? wifi.ssid : std::string()));
+  replace_token(html, "{{WIFI_CHOICE}}", custom ? "other" : "event");
+  return html;
 }
 const char* status_text(int status) { switch (status) { case 200: return "200 OK"; case 400: return "400 Bad Request"; case 403: return "403 Forbidden";
   case 408: return "408 Request Timeout"; case 413: return "413 Payload Too Large"; case 415: return "415 Unsupported Media Type";

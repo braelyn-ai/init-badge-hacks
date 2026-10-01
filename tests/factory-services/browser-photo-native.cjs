@@ -48,6 +48,7 @@ function png(){
       await page.goto(address);await page.waitForFunction(()=>!document.getElementById('save').disabled);
       await page.locator('#name').fill('Synthetic Attendee');await page.locator('#company').fill('Synthetic Lab');
       const before=requests.length;
+      await page.locator('#photoSource').selectOption('upload');
       await page.locator('#photo').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:png()});
       await page.waitForFunction(()=>document.getElementById('photoState').textContent.startsWith('Photo ready.'));
       assert.equal(requests.length,before,'Preparation and preview never upload');
@@ -66,19 +67,20 @@ function png(){
       },Array.from(written[0].body));
       assert.deepEqual([decoded.width,decoded.height],[512,512]);
       assert(decoded.pixel[0]<5&&decoded.pixel[1]>250&&decoded.pixel[2]<5,'Encoded square excludes the outer colored strips');
-      assert.deepEqual(written[1].parsed,{name:'Synthetic Attendee',company:'Synthetic Lab',github:'',x:'',linkedin:'',image:'staged',imageToken:'0123456789abcdef'});
+      assert.deepEqual(written[1].parsed,{name:'Synthetic Attendee',company:'Synthetic Lab',github:'',x:'',linkedin:'',ssid:'init() attendee',password:'',image:'staged',imageToken:'0123456789abcdef'});
       assert.deepEqual(errors,[]);await context.close();
     }
     {
       const context=await browser.newContext();const page=await context.newPage();
       await page.goto(address);await page.waitForFunction(()=>!document.getElementById('save').disabled);
       await page.locator('#name').fill('Keep this edit');const before=requests.length;
+      await page.locator('#photoSource').selectOption('upload');
       await page.locator('#photo').setInputFiles({name:'invalid.png',mimeType:'image/png',buffer:Buffer.from('not an image')});
       await page.waitForFunction(()=>document.getElementById('photoState').textContent.includes('could not be opened'));
       assert.equal(await page.locator('#save').isDisabled(),true);assert.equal(requests.length,before);
-      await page.locator('#discardPhoto').click();await page.locator('#save').click();await page.waitForFunction(()=>document.getElementById('form').hidden);
+      await page.locator('#discardPhoto').click();await page.locator('#photoSource').selectOption('keep');await page.locator('#save').click();await page.waitForFunction(()=>document.getElementById('form').hidden);
       assert.deepEqual(requests.slice(before).map(r=>r.path),['/save']);
-      assert.equal(requests.at(-1).parsed.name,'Keep this edit');assert.equal(requests.at(-1).parsed.image,'auto');await context.close();
+      assert.equal(requests.at(-1).parsed.name,'Keep this edit');assert.equal(requests.at(-1).parsed.image,'keep');await context.close();
     }
     console.log(`Native ${await browser.version()}: PNG→centered JPEG preview/upload via normal, FileReader and toDataURL paths; malformed-photo rejection and preserved draft passed`);
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
