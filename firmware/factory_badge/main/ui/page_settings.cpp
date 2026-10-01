@@ -1,8 +1,6 @@
 #include "widgets.h"
 #include <algorithm>
 #include <array>
-#include <ctime>
-#include <cstdio>
 
 namespace badge::ui {
 class SettingsPage final : public PageView {
@@ -64,49 +62,7 @@ public:
             if (context_.callbacks.orientation) context_.callbacks.orientation(context_.model.orientation);
             update();
         });
-        row(rotation, "Calibrate touch", [this] { if (context_.callbacks.calibrate_touch) context_.callbacks.calibrate_touch(); });
         row(rotation, "Touch test", [] { ui_show_touch_test(); });
-        clock_page_ = page("Date / time");
-        date_ = text(clock_page_, "", &font_sans_16);
-        auto* dates = page("Choose date");
-        calendar_ = lv_calendar_create(dates);
-        lv_obj_set_size(calendar_, 272, 240);
-        lv_obj_set_style_text_font(calendar_, &font_sans_14, 0);
-        auto* calendar_header = lv_calendar_add_header_dropdown(calendar_);
-        for (int year = 2024; year <= 2099; ++year) years_ += (years_.empty() ? "" : "\n") + std::to_string(year);
-        lv_calendar_header_dropdown_set_year_list(calendar_, years_.c_str());
-        for (uint32_t i = 0; i < lv_obj_get_child_count(calendar_header); ++i)
-            lv_obj_set_style_text_font(lv_obj_get_child(calendar_header, i), LV_FONT_DEFAULT, 0);
-        lv_obj_add_event_cb(calendar_, [](lv_event_t* e) {
-            auto& self = *static_cast<SettingsPage*>(lv_event_get_user_data(e));
-            lv_calendar_date_t date;
-            if (lv_calendar_get_pressed_date(self.calendar_, &date) == LV_RESULT_OK) {
-                self.year_ = date.year; self.month_ = date.month; self.day_ = date.day;
-                lv_calendar_set_today_date(self.calendar_, date.year, date.month, date.day);
-                self.clock_dirty_ = true;
-                self.update_draft();
-            }
-        }, LV_EVENT_VALUE_CHANGED, this);
-        auto* times = page("Choose time");
-        auto* wheels = container(times, 0, 0, 272, 150);
-        hour_ = roller(wheels, 0, 82, numbers(1, 12));
-        minute_ = roller(wheels, 92, 82, numbers(0, 59));
-        ampm_ = roller(wheels, 184, 80, "AM\nPM");
-        for (auto* wheel : {hour_, minute_, ampm_}) lv_obj_add_event_cb(wheel, [](lv_event_t* e) {
-            auto& self = *static_cast<SettingsPage*>(lv_event_get_user_data(e));
-            self.clock_dirty_ = true;
-            self.update_draft();
-        }, LV_EVENT_VALUE_CHANGED, this);
-        text(times, "Scroll to choose", &font_mono_12);
-        auto* zones = page("UTC offset");
-        zone_value_ = text(zones, "", &font_sans_24);
-        row(zones, "Earlier (-15 min)", [this] { zone_ = std::max(-840, zone_ - 15); clock_dirty_ = true; update_draft(); });
-        row(zones, "Later (+15 min)", [this] { zone_ = std::min(840, zone_ + 15); clock_dirty_ = true; update_draft(); });
-        link(clock_page_, "Date", dates);
-        link(clock_page_, "Time", times);
-        link(clock_page_, "UTC offset", zones);
-        row(clock_page_, "Sync from phone", [this] { request_setup(context_); });
-        clock_result_ = text(clock_page_, "", &font_sans_14);
         auto* hack = page("Hack this device");
         auto* code = qr(hack, HackUrl, 0, 0, 216, 22);
         lv_obj_set_style_align(code, LV_ALIGN_CENTER, 0);
@@ -117,7 +73,7 @@ public:
         row(phone, "Connect phone", [this] { request_setup(context_); });
         auto* first_row = row(home, "Brightness", [this, light] { lv_menu_set_page(menu_, light); });
         link(home, "Orientation", rotation);
-        row(home, "Date / time", [this] { begin_clock(); lv_menu_set_page(menu_, clock_page_); });
+        row(home, "Calibrate touch", [this] { if (context_.callbacks.calibrate_touch) context_.callbacks.calibrate_touch(); });
         link(home, "Hack this device", hack);
         link(home, "Connect phone", phone);
         row(home, "Reset", [] { ui_show_reset(); });
@@ -134,7 +90,6 @@ public:
         lv_area_t row_bounds;
         lv_obj_get_coords(first_row, &row_bounds);
         lv_obj_set_x(action_, row_bounds.x1);
-        begin_clock();
         page_changed();
         update();
     }
@@ -155,13 +110,10 @@ private:
         context_.settings_submenu = submenu;
         set_hidden(back_, true);
         set_hidden(action_, !submenu);
-        set_text(action_label_, current == clock_page_ ? "Save" : "Done");
         // Submenu content ends above the fixed action so nothing scrolls under it.
         lv_obj_set_height(menu_, (submenu ? ActionTop - 8 : ContentBottom) - HeadingY);
     }
     void act() {
-        // An untouched draft returns without rewriting the RTC to minute precision.
-        if (lv_menu_get_cur_main_page(menu_) == clock_page_ && clock_dirty_ && !save_clock()) return;
         lv_obj_send_event(back_, LV_EVENT_CLICKED, nullptr); // Native menu history.
     }
     lv_obj_t* page(const char* title) {
@@ -186,72 +138,14 @@ private:
     void link(lv_obj_t* parent, const char* title, lv_obj_t* target) {
         row(parent, title, [this, target] { lv_menu_set_page(menu_, target); });
     }
-    std::string numbers(int first, int last) {
-        std::string out;
-        for (int n = first; n <= last; ++n) { char value[8]; std::snprintf(value, sizeof(value), "%02d", n); if (!out.empty()) out += '\n'; out += value; }
-        return out;
-    }
-    lv_obj_t* roller(lv_obj_t* parent, int x, int width, const std::string& values) {
-        auto* r = lv_roller_create(parent);
-        lv_roller_set_options(r, values.c_str(), LV_ROLLER_MODE_NORMAL);
-        lv_obj_set_width(r, width); lv_obj_set_pos(r, x, 0);
-        lv_obj_set_style_text_font(r, &font_mono_20, 0);
-        lv_roller_set_visible_row_count(r, 3);
-        return r;
-    }
-    void begin_clock() {
-        zone_ = context_.model.utc_offset_minutes;
-        time_t local = context_.model.clock_epoch + int64_t(zone_) * 60;
-        tm fields{};
-        if (context_.model.clock_valid && gmtime_r(&local, &fields)) {
-            year_ = fields.tm_year + 1900; month_ = fields.tm_mon + 1; day_ = fields.tm_mday;
-        } else { year_ = 2026; month_ = 10; day_ = 7; fields.tm_hour = 9; }
-        lv_calendar_set_today_date(calendar_, year_, month_, day_);
-        lv_calendar_set_month_shown(calendar_, year_, month_);
-        lv_roller_set_selected(hour_, (fields.tm_hour + 11) % 12, LV_ANIM_OFF);
-        lv_roller_set_selected(minute_, fields.tm_min, LV_ANIM_OFF);
-        lv_roller_set_selected(ampm_, fields.tm_hour >= 12, LV_ANIM_OFF);
-        set_text(clock_result_, ""); update_draft();
-        clock_dirty_ = false;
-    }
-    void update_draft() {
-        int hour = (lv_roller_get_selected(hour_) + 1) % 12 + 12 * lv_roller_get_selected(ampm_);
-        char value[64];
-        std::snprintf(value, sizeof(value), "%04d-%02d-%02d  %d:%02d %s", year_, month_, day_, hour % 12 ? hour % 12 : 12, int(lv_roller_get_selected(minute_)), hour >= 12 ? "PM" : "AM");
-        set_text(date_, value);
-        std::snprintf(value, sizeof(value), "UTC%c%02d:%02d", zone_ < 0 ? '-' : '+', std::abs(zone_) / 60, std::abs(zone_) % 60);
-        set_text(zone_value_, value);
-        if (clock_result_ && clock_dirty_) set_text(clock_result_, "Changes apply on Save");
-    }
-    bool save_clock() {
-        // Gregorian civil date to Unix days, independent of the host timezone.
-        int y = year_ - (month_ <= 2);
-        int era = y / 400;
-        unsigned yo = unsigned(y - era * 400);
-        unsigned doy = (153 * unsigned(month_ + (month_ > 2 ? -3 : 9)) + 2) / 5 + day_ - 1;
-        unsigned doe = yo * 365 + yo / 4 - yo / 100 + doy;
-        int64_t days = int64_t(era) * 146097 + doe - 719468;
-        int hour = (lv_roller_get_selected(hour_) + 1) % 12 + 12 * lv_roller_get_selected(ampm_);
-        int64_t epoch = days * 86400 + hour * 3600 + lv_roller_get_selected(minute_) * 60 - zone_ * 60;
-        if (epoch < 1704067200LL || epoch > 4102444800LL) { set_text(clock_result_, "Choose a date in 2024-2099"); return false; }
-        bool ok = context_.callbacks.set_clock && context_.callbacks.set_clock(epoch, zone_);
-        set_text(clock_result_, ok ? "Date / time saved" : "Could not save. Try again.");
-        if (ok) clock_dirty_ = false;
-        lv_obj_scroll_to_view(clock_result_, LV_ANIM_OFF);
-        return ok;
-    }
     void brightness(int delta) {
         context_.model.brightness_percent = std::clamp(context_.model.brightness_percent + delta, 10, 100);
         if (context_.callbacks.brightness) context_.callbacks.brightness(context_.model.brightness_percent);
         update();
     }
     lv_obj_t *home_{}, *back_{}, *action_{}, *action_label_{};
-    lv_obj_t *menu_{}, *brightness_{}, *battery_{}, *clock_page_{}, *date_{}, *calendar_{},
-             *hour_{}, *minute_{}, *ampm_{}, *zone_value_{}, *clock_result_{};
+    lv_obj_t *menu_{}, *brightness_{}, *battery_{};
     std::array<lv_obj_t*, 3> orientation_{};
-    std::string years_;
-    int year_ = 2026, month_ = 10, day_ = 7, zone_ = 0;
-    bool clock_dirty_ = false;
 };
 std::unique_ptr<PageView> make_settings(Context& c, lv_obj_t* p) { return std::make_unique<SettingsPage>(c, p); }
 } // namespace badge::ui

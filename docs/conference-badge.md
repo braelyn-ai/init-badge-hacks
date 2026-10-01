@@ -687,7 +687,7 @@ was not recalibrated. Private artifacts: `.build/settings-menu/`.
 
 ### Touch calibration (September 28)
 
-Settings → Orientation → Calibrate touch measures nine orange-ring targets and
+Settings → Calibrate touch measures nine orange-ring targets and
 checks five independent targets. Hold each center briefly and release. The flow
 uses real raw sensor contacts, fixes the screen at Default without changing the
 saved preference, and ignores simulated touches. Either side button cancels or
@@ -779,3 +779,9 @@ separation (the 46px white action is unchanged); longer pages such as Settings
 home, Orientation and Date / time scroll natively instead of shrinking targets.
 Battery status moved from Brightness to Settings home, as muted 12px mono text
 directly under the title.
+Calibrate touch is now its own Settings row (after Orientation) that opens the
+wizard directly; Orientation keeps Free, Default, 180° and Touch test.
+Later the same day the Date / time submenu was removed in favor of the captive
+portal's browser clock sync (see `conference-clock.md`), so every submenu's white
+action now reads **Done**. Settings home is Brightness, Orientation, Calibrate
+touch, Hack this device, Connect phone and Reset.

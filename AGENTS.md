@@ -59,9 +59,10 @@
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
   loop-up rotation 2 means blue previous / yellow next. Both open setup; either
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
-- Settings uses native LVGL menus: Brightness, Orientation, Date / time, Hack this device,
-  Connect phone, and Reset. Calendar/time roller/UTC-offset edits apply only on Save,
-  through the main-owned checked clock service. Hack QR URL is https://workos.com/init/badge.
+- Settings uses native LVGL menus: Brightness, Orientation, Calibrate touch,
+  Hack this device, Connect phone, and Reset. There is no on-device date/time
+  editor; the clock is set only by phone setup (captive portal) or USB
+  provisioning through the main-owned checked clock service. Hack QR URL is https://workos.com/init/badge.
   Settings is page 4, after Badge; Hack this device exists only in its submenu. Brightness defaults to 60%
   with a visible minimum and delayed persistent saves. Display clocks use h:mm
   AM/PM; UTC storage and schedule calculations remain unchanged. Orientation is exactly Free (automatic),
@@ -92,9 +93,8 @@
   Use shared heading bounds (84,52,300) and content top 100, matching Schedule.
   Settings has a fixed 48px native header with centered text; menu history must
   not shift the heading or content downward. Rows are square. Submenus hide the
-  page arrows, dots and header chevron and show one white bottom action at
-  y=354 (Save on Date / time, Done elsewhere) that returns via native menu
-  history; an untouched Date / time Save writes nothing. Page arrow targets are
+  page arrows, dots and header chevron and show one white bottom **Done** action
+  at y=354 that returns via native menu history. Page arrow targets are
   the 72px outer strips from y=100 to 404, beside content at x=72..396.
   Its locked page hides the event name and says
   `tap the code to reveal a secret invitation`. Enter Morse
@@ -128,7 +128,7 @@
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.
   Never apply calibration, save touch data, or start networking from this test.
-  Settings → Orientation → Calibrate touch is a separate measurement wizard.
+  Settings → Calibrate touch is a separate measurement wizard.
   It collects real raw contacts at nine fit and five holdout targets in rotation 0,
   saves an ESPtember-compatible affine map only after validation, and preserves
   the prior map on cancellation. The board loads validated espt-touch/record v1/v2

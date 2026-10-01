@@ -16,14 +16,13 @@ power loss. Visible times use **12-hour `h:mm AM/PM`**, with no leading zero on
 the hour: midnight is `12:00 AM` and noon is `12:00 PM`. An invalid clock displays
 `--:--`.
 
-## Manual Settings editor
+## No on-device editor
 
-Settings → Date / time uses LVGL Calendar and time rollers. UTC offset changes
-in 15-minute steps. Draft changes do not affect time until Save date / time;
-main calls the same checked RTC/system/NVS clock service with source `manual`.
-The editor displays success only after that service succeeds. Leaving Settings
-without saving discards the draft. The offset is fixed; phone sync can refresh it
-when daylight-saving rules change.
+September 30: the Settings → Date / time editor (Calendar, rollers, UTC offset)
+was removed in favor of phone setup. The captive portal's automatic browser clock
+sync, and USB provisioning during flashing, are the only ways to set the clock;
+both use the same checked RTC/system/NVS clock service. The earlier `manual`
+source and its `set_clock` UI callback no longer exist.
 
 ## Phone synchronization and Settings
 

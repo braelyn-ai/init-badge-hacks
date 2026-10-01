@@ -277,12 +277,12 @@ int main(int argc, char** argv) {
 
     int brightness = 0, orientation = -1, network = -1, setup = 0;
     int bookmarked = -1, resets = 0, after_dark_unlocks = 0;
-    int clock_saves = 0; int64_t saved_epoch = 0; int saved_offset = 0; bool clock_save_ok = true;
+    int calibration_requests = 0;
     bool vibrating = false;
     unsigned vibration_starts = 0, vibration_stops = 0;
     badge::UiModel model;
     badge::UiCallbacks callbacks;
-    callbacks.set_clock = [&](int64_t epoch, int offset) { ++clock_saves; saved_epoch = epoch; saved_offset = offset; return clock_save_ok; };
+    callbacks.calibrate_touch = [&] { ++calibration_requests; };
     callbacks.brightness = [&](int value) { brightness = value; };
     callbacks.orientation = [&](badge::Orientation value) { orientation = int(value); };
     callbacks.bookmark = [&](int index) { bookmarked = index; };
@@ -766,47 +766,12 @@ int main(int argc, char** argv) {
     menu_back(); tap_text("Orientation"); tap_text("180°"); assert(orientation == 2);
     tap(434, 233); assert(badge::ui_page_index() == 4); // Page arrows are hidden in submenus.
     snapshot("settings-orientation");
-    menu_back(); tap_text("Date / time");
-    assert(clock_saves == 0);
-    snapshot("settings-date-time");
-    tap_text("Date"); assert(widget(lv_screen_active(), &lv_calendar_class));
-    auto* calendar = widget(lv_screen_active(), &lv_calendar_class);
-    auto* year_dropdown = widget(calendar, &lv_dropdown_class);
-    assert(year_dropdown && lv_dropdown_get_option_count(year_dropdown) == 76);
-    snapshot("settings-calendar"); menu_back();
-    tap_text("Time"); snapshot("settings-time"); menu_back();
-    assert(clock_saves == 0);
-    assert(!action_label(lv_screen_active(), "Done"));
-    tap_text("Save"); // An untouched draft returns without rewriting the RTC.
-    assert(clock_saves == 0 && action_label(lv_screen_active(), "Brightness"));
-    assert(!action_label(lv_screen_active(), "Save"));
-    tap_text("Date / time");
-    tap_text("UTC offset"); tap_text("Later (+15 min)"); tap_text("Earlier (-15 min)"); menu_back();
-    tap_text("Save");
-    assert(clock_saves == 1 && saved_epoch == model.clock_epoch && saved_offset == 0);
-    assert(action_label(lv_screen_active(), "Brightness")); // Save returns to Settings.
-    tap_text("Date / time");
-    tap_text("UTC offset"); tap_text("Later (+15 min)"); menu_back();
-    clock_save_ok = false; tap_text("Save");
-    assert(active_label(lv_screen_active(), "Could not save. Try again."));
-    assert(action_label(lv_screen_active(), "Save")); // A failed save stays put.
-    clock_save_ok = true; tap_text("Save");
-    assert(action_label(lv_screen_active(), "Brightness"));
-    // Saving leap-day local midnight with a negative offset crosses UTC correctly.
-    clock_save_ok = true;
-    model.clock_epoch = 1709193600; model.utc_offset_minutes = -480;
-    badge::ui_update(model); spin();
-    tap_text("Date / time");
-    const int saves_before_draft = clock_saves;
-    tap_text("UTC offset"); tap_text("Later (+15 min)"); menu_back();
-    assert(clock_saves == saves_before_draft);
-    tap_text("Save");
-    assert(saved_epoch == model.clock_epoch - 900 && saved_offset == -465);
-    // A draft abandoned by leaving Settings never reaches the RTC callback.
-    tap_text("Date / time"); tap_text("UTC offset"); tap_text("Earlier (-15 min)");
-    const int saves_before_exit = clock_saves;
-    badge::ui_page(-1); badge::ui_page(1); spin();
-    assert(clock_saves == saves_before_exit);
+    menu_back();
+    // The clock is set only through phone setup; Settings has no manual editor.
+    assert(!action_label(lv_screen_active(), "Date / time"));
+    assert(!widget(lv_screen_active(), &lv_calendar_class) && !widget(lv_screen_active(), &lv_roller_class));
+    tap_text("Calibrate touch"); // A top-level row that opens the wizard directly.
+    assert(calibration_requests == 1 && badge::ui_page_index() == 4);
     tap_text("Hack this device");
     spin();
     assert(lit_pixels(120, 132, 348, 360) > 10000);

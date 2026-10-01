@@ -496,12 +496,6 @@ extern "C" void app_main() {
     callbacks.cancel_calibration = [] { calibration.cancel(); calibrationRequested = false; };
     callbacks.request_setup = []{ startSetup(); };
     callbacks.close_setup = closeSetup;
-    callbacks.set_clock = [](int64_t epoch, int offset) {
-        std::string error;
-        bool ok = badge_clock::set(epoch, offset, "manual", error);
-        refreshModel();
-        return ok;
-    };
     callbacks.brightness = [](int value) {
         settings.setBrightness(value, board::millis());
         board::setBrightness(settings.brightness); refreshModel();

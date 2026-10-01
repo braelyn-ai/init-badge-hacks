@@ -47,7 +47,6 @@ struct UiCallbacks {
     std::function<void()> cancel_calibration;
     std::function<void()> request_setup;
     std::function<void()> close_setup;
-    std::function<bool(int64_t, int)> set_clock; // Main-task RTC/NVS write; true only on readback success.
     std::function<void(int)> brightness; // Absolute percentage, 10 through 100.
     std::function<void(Orientation)> orientation;
     std::function<void(int)> network;
