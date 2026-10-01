@@ -840,6 +840,3 @@ hidden title's space, so the photo starts at the shared content top (y=100) and
 nothing shifts between pages. The photo is 208px with 16px rounded corners (like
 the After Dark artwork); the QR uses the same rounded square, and its gray
 network name occupies the title position.
-Follow-up: the photo and QR use the Schedule cards' square eight-pixel corner
-steps instead of rounded corners (`square_notches`, drawn after children so the
-image and QR modules are cut too).

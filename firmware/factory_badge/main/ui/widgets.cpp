@@ -57,20 +57,6 @@ lv_obj_t* page_heading(lv_obj_t* parent, const char* title) {
     return label(parent, title, HeadingX, HeadingY, HeadingWidth, &font_sans_24, cream());
 }
 
-void square_notches(lv_obj_t* object) {
-    lv_obj_add_event_cb(object, [](lv_event_t* event) {
-        lv_area_t bounds;
-        lv_obj_get_coords(static_cast<lv_obj_t*>(lv_event_get_current_target(event)), &bounds);
-        lv_draw_rect_dsc_t shape;
-        lv_draw_rect_dsc_init(&shape);
-        shape.bg_color = lv_color_black();
-        shape.bg_opa = LV_OPA_COVER;
-        for (int x : {int(bounds.x1), int(bounds.x2) - 7}) for (int y : {int(bounds.y1), int(bounds.y2) - 7}) {
-            lv_area_t corner = {x, y, x + 7, y + 7};
-            lv_draw_rect(lv_event_get_layer(event), &shape, &corner);
-        }
-    }, LV_EVENT_DRAW_POST_END, nullptr);
-}
 lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, int height,
                  std::function<void()> action) {
     auto* object = lv_button_create(parent);

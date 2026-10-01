@@ -1081,8 +1081,7 @@ int main(int argc, char** argv) {
     assert(!visible_label("Badge") && visible_label("Conference attendee") && visible_label("WorkOS"));
     assert(lit_pixels(130, 100, 338, 308) > 40000);     // 208px photo square at the content top.
     assert(lit_pixels(84, 52, 384, 96) == 0);           // Title space stays empty until a QR shows.
-    assert(lit_pixels(130, 100, 138, 108) == 0);        // Square eight-pixel corner step,
-    assert(lit_pixels(138, 100, 146, 108) == 64);       // like the Schedule cards.
+    assert(lit_pixels(130, 100, 133, 103) == 0);        // Rounded corner.
     assert(lv_obj_get_style_text_font(find_label(lv_screen_active(), "Conference attendee"), LV_PART_MAIN) == &font_mono_32);
     assert_idle();
     tap(234, 180); // The QR replaces the photo in the same square.
