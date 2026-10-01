@@ -55,7 +55,8 @@ int lit_pixels(int x0, int y0, int x1, int y1) {
 }
 void assert_chrome(bool intro = false, bool filled_profile = false) {
     if (filled_profile) {
-        // A configured Badge keeps only its page arrows: no brand mark or dots.
+        // A configured Badge keeps the brand mark and arrows but no dots.
+        assert(lit_pixels(203, 24, 265, 38) > 30);
         assert(lit_pixels(10, 210, 64, 253) > 40);
         assert(lit_pixels(404, 210, 458, 253) > 40);
         assert(lit_pixels(184, 430, 284, 442) == 0);
@@ -1076,20 +1077,21 @@ int main(int argc, char** argv) {
         auto* found = find_label(lv_display_get_screen_active(display), text);
         return found && lv_obj_is_visible(found);
     };
-    // Configured: no title, a larger photo in the space it used, bigger text.
+    // Configured: the title is hidden but keeps its space; larger rounded photo.
     assert(!visible_label("Badge") && visible_label("Conference attendee") && visible_label("WorkOS"));
-    assert(lit_pixels(118, 64, 350, 296) > 50000);      // 232px photo square.
-    assert(lit_pixels(118, 24, 350, 60) == 0);          // No brand mark or network label yet.
+    assert(lit_pixels(130, 100, 338, 308) > 40000);     // 208px photo square at the content top.
+    assert(lit_pixels(84, 52, 384, 96) == 0);           // Title space stays empty until a QR shows.
+    assert(lit_pixels(130, 100, 133, 103) == 0);        // Rounded corner.
     assert(lv_obj_get_style_text_font(find_label(lv_screen_active(), "Conference attendee"), LV_PART_MAIN) == &font_mono_32);
     assert_idle();
     tap(234, 180); // The QR replaces the photo in the same square.
     assert(visible_label("GitHub") && !visible_label("Badge"));
     assert(visible_label("Conference attendee"));
-    assert(lit_pixels(118, 64, 350, 296) > 20000 && lit_pixels(118, 64, 350, 296) < 50000);
+    assert(lit_pixels(130, 100, 338, 308) > 20000 && lit_pixels(130, 100, 338, 308) < 40000);
     snapshot("profile-qr");
     assert_chrome(false, true);
     tap(234, 180);
-    assert(!visible_label("GitHub") && lit_pixels(118, 64, 350, 296) > 50000);
+    assert(!visible_label("GitHub") && lit_pixels(130, 100, 338, 308) > 40000);
     snapshot("profile-restored");
     assert_chrome(false, true);
     assert_idle();
@@ -1112,7 +1114,7 @@ int main(int argc, char** argv) {
     model.selected_network = 0; ++model.profile_revision;
     badge::ui_update(model); spin();
     tap(234, 180); spin();
-    assert(visible_label("GitHub") && lit_pixels(118, 64, 350, 296) > 20000);
+    assert(visible_label("GitHub") && lit_pixels(130, 100, 338, 308) > 20000);
     model.company = "Example company"; ++model.profile_revision;
     badge::ui_update(model); spin();
     assert(!visible_label("GitHub") && visible_label("Example company"));

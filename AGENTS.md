@@ -94,10 +94,11 @@
   on a personalized device merely to test it. Use synthetic storage fixtures.
 - Party is always visible (internal After Dark page ID 2). Use five pages/dots:
   init() 0, Schedule 1, Party 2, Badge 3, Settings 4. All except init() have a
-  visible title, except a configured Badge: it drops the title, brand mark and
-  dots, keeps the arrows, shows a 232px photo at y=64 with Mono 32 name and
-  Regular 24 company, and a tap swaps the photo for a same-size QR with the
-  network name in gray above it.
+  visible title, except a configured Badge: it hides the title but keeps its
+  space (no layout shift), keeps the init() mark and arrows, drops the dots,
+  shows a 208px 16px-rounded photo at the content top with Mono 32 name and
+  Regular 24 company, and a tap swaps the photo for a same-size rounded QR with
+  the network name in gray in the title's place.
   Use shared heading bounds (84,52,300) and content top 100, matching Schedule.
   Settings has a fixed 48px native header with centered text; menu history must
   not shift the heading or content downward. Rows are square. Submenus hide the

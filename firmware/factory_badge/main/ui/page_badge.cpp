@@ -8,6 +8,11 @@ class BadgePage final : public PageView {
 public:
     BadgePage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
         heading_ = page_heading(root_, "Badge");
+        // A configured badge hides its title but keeps that space; the QR's
+        // network name appears there in gray.
+        network_ = label(root_, "", HeadingX, HeadingY, HeadingWidth, &font_sans_24, muted());
+        lv_obj_set_style_text_align(network_, LV_TEXT_ALIGN_CENTER, 0);
+        set_hidden(network_, true);
         list_ = container(root_, 72, ContentTop, 324, CardHeight);
         lv_obj_add_flag(list_, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_scroll_dir(list_, LV_DIR_VER);
@@ -22,8 +27,7 @@ public:
         }
         lv_obj_add_event_cb(list_, [](lv_event_t* event) {
             auto& self = *static_cast<BadgePage*>(lv_event_get_user_data(event));
-            const int height = self.card_height_;
-            const int selected = std::clamp((int(lv_obj_get_scroll_y(self.list_)) + height / 2) / height, 0, 2);
+            const int selected = std::clamp((int(lv_obj_get_scroll_y(self.list_)) + CardHeight / 2) / CardHeight, 0, 2);
             if (selected != self.context_.model.selected_network) {
                 self.context_.model.selected_network = selected;
                 if (self.context_.callbacks.network) self.context_.callbacks.network(selected);
@@ -48,17 +52,18 @@ public:
     }
 private:
     static constexpr int CardHeight = ContentBottom - ContentTop;
-    // A configured badge drops the title and uses the space above it for a
-    // larger photo; its QR replaces the photo in exactly the same square.
-    static constexpr int ProfileTop = 24, ProfileHeight = ContentBottom - ProfileTop;
-    static constexpr int PhotoSide = 232, PhotoX = (324 - PhotoSide) / 2, PhotoY = 40;
+    // A configured badge shows a larger rounded photo; its QR replaces the
+    // photo in exactly the same square.
+    static constexpr int PhotoSide = 208, PhotoX = (324 - PhotoSide) / 2, PhotoY = 0, PhotoRadius = 16;
     void scroll_to_model() {
         selected_ = std::clamp(context_.model.selected_network, 0, 2);
-        lv_obj_scroll_to_y(list_, selected_ * card_height_, LV_ANIM_OFF);
+        lv_obj_scroll_to_y(list_, selected_ * CardHeight, LV_ANIM_OFF);
     }
     lv_obj_t* avatar(lv_obj_t* card, int x, int y, int side) {
         auto* frame = container(card, x, y, side, side);
         lv_obj_remove_flag(frame, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_style_radius(frame, PhotoRadius, 0);
+        lv_obj_set_style_clip_corner(frame, true, 0);
         auto* image = lv_image_create(frame);
         if (avatar_ && image_.header.w && image_.header.h) {
             lv_image_set_src(image, &image_);
@@ -77,7 +82,8 @@ private:
         const auto& model = context_.model;
         // Remove every image user before changing its descriptor or backing data.
         for (auto* card : cards_) lv_obj_clean(card);
-        photos_ = {}; codes_ = {}; networks_ = {}; showing_code_ = {};
+        photos_ = {}; codes_ = {}; showing_code_ = {};
+        set_hidden(network_, true);
 #if LV_CACHE_DEF_SIZE > 0
         lv_image_cache_drop(&image_);
 #endif
@@ -93,14 +99,10 @@ private:
         const bool any = std::any_of(urls_.begin(), urls_.end(), [](const auto& url) { return !url.empty(); });
         const bool filled = !name_.empty() || !company_.empty() || avatar_ || any;
         set_hidden(heading_, filled);
-        card_height_ = filled ? ProfileHeight : CardHeight;
-        lv_obj_set_pos(list_, 72, filled ? ProfileTop : ContentTop);
-        lv_obj_set_height(list_, card_height_);
         // One social account per badge: show only cards with an account (the
         // first card stands in when none is set).
         for (int i = 0; i < 3; ++i) {
             auto* card = cards_[i];
-            lv_obj_set_height(card, card_height_);
             set_hidden(card, any ? urls_[i].empty() : i != 0);
             if (!filled) {
                 avatar(card, 82, 0, 160);
@@ -109,20 +111,19 @@ private:
                 button(card, "Tap to configure", 62, 255, 200, 44, [this] { request_setup(context_); });
                 continue;
             }
-            networks_[i] = label(card, NetworkNames[i], 6, 4, 312, &font_sans_20, muted());
-            set_hidden(networks_[i], true);
             photos_[i] = avatar(card, PhotoX, PhotoY, PhotoSide);
             if (!urls_[i].empty()) {
                 codes_[i] = qr(card, urls_[i], PhotoX, PhotoY, PhotoSide, 16);
+                lv_obj_set_style_radius(codes_[i], PhotoRadius, 0);
                 set_hidden(codes_[i], true);
             }
-            auto* name = label(card, name_.c_str(), 6, PhotoY + PhotoSide + 12, 312, &font_mono_32);
+            auto* name = label(card, name_.c_str(), 6, PhotoY + PhotoSide + 8, 312, &font_mono_32);
             lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
-            auto* company = label(card, company_.c_str(), 6, PhotoY + PhotoSide + 56, 312, &font_mono_regular_24, muted());
+            auto* company = label(card, company_.c_str(), 6, PhotoY + PhotoSide + 50, 312, &font_mono_regular_24, muted());
             lv_label_set_long_mode(company, LV_LABEL_LONG_DOT);
             // No repeated event bindings on rebuild: the tap plane belongs
             // to this card's freshly created children.
-            auto* tap_plane = container(card, 0, 0, 324, card_height_);
+            auto* tap_plane = container(card, 0, 0, 324, CardHeight);
             on_tap(tap_plane, [this, i] { toggle_code(i); });
         }
     }
@@ -131,13 +132,14 @@ private:
         showing_code_[network] = !showing_code_[network];
         set_hidden(photos_[network], showing_code_[network]);
         set_hidden(codes_[network], !showing_code_[network]);
-        set_hidden(networks_[network], !showing_code_[network]);
+        set_text(network_, NetworkNames[network]);
+        set_hidden(network_, !showing_code_[network]);
     }
     lv_obj_t* heading_ = nullptr;
     lv_obj_t* list_ = nullptr;
-    std::array<lv_obj_t*, 3> cards_{}, photos_{}, codes_{}, networks_{};
+    lv_obj_t* network_ = nullptr;
+    std::array<lv_obj_t*, 3> cards_{}, photos_{}, codes_{};
     std::array<bool, 3> showing_code_{};
-    int card_height_ = CardHeight;
     uint32_t revision_ = 0;
     int selected_ = -1;
     const uint16_t* avatar_ = nullptr;

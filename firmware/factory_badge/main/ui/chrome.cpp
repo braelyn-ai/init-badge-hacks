@@ -50,9 +50,9 @@ void Chrome::update() {
     const bool profile_filled = context_.page == 3 &&
         (!model.name.empty() || !model.company.empty() || model.avatar ||
          std::any_of(model.socials.begin(), model.socials.end(), [](const auto& url) { return !url.empty(); }));
-    // A configured Badge keeps only the page arrows: no brand mark or dots.
+    // A configured Badge keeps the brand mark and arrows but drops the dots.
     set_hidden(root_, context_.setup || context_.touch_test || context_.reset);
-    set_hidden(brand_, context_.page == 0 || profile_filled);
+    set_hidden(brand_, context_.page == 0);
     set_hidden(status_root_, context_.setup || context_.touch_test || context_.reset);
     set_text(footer_, !model.photo_status.empty() ? model.photo_status
         : context_.page == SettingsPageIndex && model.settings_pending ? "Saving settings..." : "");
