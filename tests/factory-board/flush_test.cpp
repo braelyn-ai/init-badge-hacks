@@ -1,4 +1,5 @@
 #include "board_flush.h"
+#include "neutral_gray.h"
 #include "lgfx/v1/panel/Panel_FrameBufferBase.hpp"
 #include "lgfx/v1/platforms/common.hpp"
 #include "lgfx/v1/misc/pixelcopy.hpp"
@@ -80,7 +81,33 @@ void checkRegion(int rotation, int x, int y, int w, int h) {
     for (int i = 0; i < w * h; ++i) assert(restored[i].raw == source[i].raw);
 }
 
+constexpr uint16_t rgb(unsigned r, unsigned g, unsigned b) { return uint16_t(r << 11 | g << 5 | b); }
+void checkNeutralGrays() {
+    using board::neutralizeGray565;
+    // #161616 and the empty-portrait frame blend (r5=2, g6=5) read green.
+    static_assert(neutralizeGray565(rgb(2, 5, 2)) == rgb(2, 4, 2));
+    static_assert(neutralizeGray565(rgb(2, 3, 2)) == rgb(2, 4, 2)); // magenta cast
+    static_assert(neutralizeGray565(rgb(0, 1, 0)) == 0);            // near-black fringe
+    static_assert(neutralizeGray565(rgb(3, 6, 3)) == rgb(3, 6, 3)); // #181818 is kept
+    static_assert(neutralizeGray565(rgb(31, 63, 31)) == 0xffff);
+    static_assert(neutralizeGray565(rgb(16, 32, 16)) == rgb(16, 32, 16)); // #808080 tie kept
+    static_assert(neutralizeGray565(rgb(2, 7, 2)) == rgb(2, 7, 2)); // deliberate green kept
+    static_assert(neutralizeGray565(rgb(20, 12, 8)) == rgb(20, 12, 8)); // colors untouched
+    static_assert(neutralizeGray565(rgb(3, 5, 4)) == rgb(3, 5, 4));
+    for (unsigned r = 0; r < 32; ++r)
+        for (unsigned g = 0; g < 64; ++g) {
+            const uint16_t out = neutralizeGray565(rgb(r, g, r));
+            assert(neutralizeGray565(out) == out); // Idempotent across repeated flushes.
+            const int error = board::distance(board::expand6((out >> 5) & 63), board::expand5(r));
+            if (board::distance(int(g), int(board::neutralGreen(r))) <= 1) assert(error <= 2);
+        }
+    uint16_t row[] = {rgb(2, 5, 2), rgb(9, 40, 30), rgb(0, 1, 0)};
+    board::neutralizeGrays565(row, 3);
+    assert(row[0] == rgb(2, 4, 2) && row[1] == rgb(9, 40, 30) && row[2] == 0);
+}
+
 int main() {
+    checkNeutralGrays();
     // Prove the regression: old streaming writes change RAM but leave the
     // rotated dirty rectangle empty, so Panel_AMOLED::display() returns early.
     MemoryPanel old(2);

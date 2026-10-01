@@ -8,6 +8,7 @@
 #include "touch_mapping.h"
 #include <cmath>
 #include "board_flush.h"
+#include "neutral_gray.h"
 #include "board_vibration.h"
 #include "vendor/cst820/cst820.h"
 #include "vendor/rx8130/rx8130.h"
@@ -191,6 +192,7 @@ bool initPower() {
 void flush(lv_display_t* display, const lv_area_t* area, uint8_t* pixels) {
     const uint32_t w = area->x2 - area->x1 + 1;
     const uint32_t h = area->y2 - area->y1 + 1;
+    neutralizeGrays565(reinterpret_cast<uint16_t*>(pixels), size_t(w) * h);
     const auto* source = reinterpret_cast<const lgfx::rgb565_t*>(pixels);
     flushImageChunks(*gfx, area->x1, area->y1, w, h, source);
     lv_display_flush_ready(display);

@@ -743,3 +743,16 @@ Hack QR. Calibration, profile flags and invitation unlock were preserved. USB
 discovery needed over ten seconds under host load; its timeout is now sixty
 seconds with all identity/partition checks retained (eight guard tests passed).
 Private evidence: `.build/fixed-layout/`.
+
+### September 30 neutral grays
+
+RGB565 has six green bits but five red/blue bits, so grays rounded per channel
+(alpha blends, anti-aliasing, low-alpha masks, `#161616`) land one green step
+off neutral and read green on the dark UI. `board::flush` now snaps only pixels
+whose red and blue match and whose green is within one step of neutral
+(`main/neutral_gray.h`, host-checked in `tests/factory-board`); colors, photos'
+non-gray pixels and equal-distance mid-gray ties are unchanged. The shared
+`panel()` gray is now `#181818`. Device captures after flashing: the Badge
+button and Settings rows render (24,24,24), the empty-portrait frame (16,16,16),
+and the former (16,20,16)/(0,4,0) pixels are gone. Max main-loop gap stayed
+237 ms during page changes.

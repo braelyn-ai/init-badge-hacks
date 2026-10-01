@@ -142,7 +142,6 @@ private:
     }
     lv_obj_t* row(lv_obj_t* parent, const char* title, std::function<void()> action) {
         auto* b = button(parent, title, 0, 0, 272, 44, std::move(action));
-        lv_obj_set_style_bg_color(b, lv_color_hex(0x181818), 0);
         lv_obj_set_style_radius(b, 8, 0);
         return b;
     }

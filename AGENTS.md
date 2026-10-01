@@ -79,6 +79,8 @@
   outline and right-aligned On now. Use RGB565-neutral card levels: #181818 for
   current, #101010 upcoming, and #101010 before the past-state 50% opacity.
   Times use #E7E7E7, slightly dimmer than white titles.
+  The board flush snaps grays within one green step of RGB565 neutral; shared
+  panels/buttons use neutral #181818 (never #161616). See `main/neutral_gray.h`.
   Keep input/setup/save deadlines on monotonic time, independent of clock changes.
 - Settings → Reset badge requires a fresh confirmation tap. Clear only the manual
   conference profile/photo/links, bookmarks, UI preferences, After Dark unlock and
