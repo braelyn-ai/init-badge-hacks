@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Temporary conference service (October 2026). Fully isolated: no other
+  // Worker, binding or account data. See README.md before changing.
+  "name": "chan-avatar",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-18",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "avatar.chan.dev", "custom_domain": true }],
+  "images": { "binding": "IMAGES" },
+  // Bounds uncached unavatar lookups across every caller (one shared key).
+  "ratelimits": [{ "name": "LOOKUPS", "namespace_id": "4601", "simple": { "limit": 30, "period": 60 } }],
+  // Handles are in request paths; keep invocation logs off.
+  "observability": { "enabled": true, "head_sampling_rate": 0.1, "logs": { "enabled": true, "invocation_logs": false } }
+}

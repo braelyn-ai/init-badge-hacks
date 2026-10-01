@@ -145,6 +145,9 @@
   Explicit filesystem initialization applies only to the verified existing map
   and erases ONLY `ffat`; never run it on the provisioned development board or add
   automatic format-on-error.
+- `services/avatar/` is the temporary, fully isolated `avatar.chan.dev` photo
+  relay (unavatar + Cloudflare Images) for October 2026; read its README. It is
+  deployed manually and never joins chan-services or holds badge credentials.
 - Active gateway source is `/Users/chan/Developer/chan-services/apps/devices`.
   The private `chantastic/chan-services` monorepo owns service deployments; read
   its `docs/deployment.md` before gateway work. `gateway/` here and the standalone
