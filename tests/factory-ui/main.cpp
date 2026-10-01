@@ -55,7 +55,9 @@ int lit_pixels(int x0, int y0, int x1, int y1) {
 }
 void assert_chrome(bool intro = false, bool filled_profile = false) {
     if (filled_profile) {
-        assert(lit_pixels(10, 210, 64, 250) == 0);
+        // A configured Badge keeps only its page arrows: no brand mark or dots.
+        assert(lit_pixels(10, 210, 64, 253) > 40);
+        assert(lit_pixels(404, 210, 458, 253) > 40);
         assert(lit_pixels(184, 430, 284, 442) == 0);
         return;
     }
@@ -1070,15 +1072,24 @@ int main(int argc, char** argv) {
     spin();
     snapshot("profile");
     assert_chrome(false, true);
+    auto visible_label = [&](const char* text) {
+        auto* found = find_label(lv_display_get_screen_active(display), text);
+        return found && lv_obj_is_visible(found);
+    };
+    // Configured: no title, a larger photo in the space it used, bigger text.
+    assert(!visible_label("Badge") && visible_label("Conference attendee") && visible_label("WorkOS"));
+    assert(lit_pixels(118, 64, 350, 296) > 50000);      // 232px photo square.
+    assert(lit_pixels(118, 24, 350, 60) == 0);          // No brand mark or network label yet.
+    assert(lv_obj_get_style_text_font(find_label(lv_screen_active(), "Conference attendee"), LV_PART_MAIN) == &font_mono_32);
     assert_idle();
-    tap(234, 314);
-    assert(lv_obj_is_visible(find_label(lv_screen_active(), "Badge")));
-    assert(lit_pixels(154,83,314,92)==0); // Portrait cannot peek above the QR panel.
-    snapshot("expanded");
+    tap(234, 180); // The QR replaces the photo in the same square.
+    assert(visible_label("GitHub") && !visible_label("Badge"));
+    assert(visible_label("Conference attendee"));
+    assert(lit_pixels(118, 64, 350, 296) > 20000 && lit_pixels(118, 64, 350, 296) < 50000);
+    snapshot("profile-qr");
     assert_chrome(false, true);
-    assert(lit_pixels(101, 104, 367, 370) > 20000); // Expanded QR is rendered.
-    tap(234, 230);
-    assert(lv_obj_is_visible(find_label(lv_screen_active(), "Badge")));
+    tap(234, 180);
+    assert(!visible_label("GitHub") && lit_pixels(118, 64, 350, 296) > 50000);
     snapshot("profile-restored");
     assert_chrome(false, true);
     assert_idle();
@@ -1087,26 +1098,24 @@ int main(int argc, char** argv) {
     model.selected_network = 2;
     badge::ui_update(model);
     spin();
-    tap(234, 280);
+    tap(234, 180);
     assert(!find_label(lv_display_get_screen_active(display), "No account yet"));
-    assert(find_label(lv_display_get_screen_active(display), "Tap to close"));
-    tap(234, 230);
+    assert(visible_label("X / Twitter"));
+    tap(234, 180);
     assert(badge::ui_page_index() == 3 && !badge::ui_setup_active());
     assert_chrome(false, true);
 
-    // A profile with only a social URL must still expose that QR, and an
-    // image replacement must not leave an expanded code for stale profile data.
+    // A profile with only a social URL must still expose that QR, and a
+    // profile change must not leave a code showing for stale profile data.
     model.name.clear(); model.company.clear(); model.avatar = nullptr;
     model.avatar_width = model.avatar_height = 0;
     model.selected_network = 0; ++model.profile_revision;
     badge::ui_update(model); spin();
     tap(234, 180); spin();
-    assert(find_label(lv_display_get_screen_active(display), "Tap to close"));
-    assert(lit_pixels(101, 104, 367, 370) > 20000);
+    assert(visible_label("GitHub") && lit_pixels(118, 64, 350, 296) > 20000);
     model.company = "Example company"; ++model.profile_revision;
     badge::ui_update(model); spin();
-    assert(!find_label(lv_display_get_screen_active(display), "Tap to close"));
-    assert(find_label(lv_display_get_screen_active(display), "Example company"));
+    assert(!visible_label("GitHub") && visible_label("Example company"));
 
     // Calibration is modal, freezes paging, uses raw physical samples elsewhere,
     // and physical exit cancels without changing preferences.

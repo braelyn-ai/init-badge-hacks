@@ -100,8 +100,9 @@ def main():
         ).rstrip() + "\n")
 
     for family, source, license_family, sizes in (
-        ("mono", "IBMPlexMono-Medium.ttf", "IBMPlexMono", (12, 18, 24)),
+        ("mono", "IBMPlexMono-Medium.ttf", "IBMPlexMono", (12, 18, 24, 32)),
         ("mono", "IBMPlexMono-Regular.ttf", "IBMPlexMono", (20,)),
+        ("mono_regular", "IBMPlexMono-Regular.ttf", "IBMPlexMono", (24,)),
         ("mono_semibold", "IBMPlexMono-SemiBold.ttf", "IBMPlexMono", (12,)),
         ("sans", "Inter-Medium.ttf", "Inter", (12, 14, 16, 20, 24, 32)),
     ):

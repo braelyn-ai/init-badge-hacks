@@ -13,8 +13,8 @@ pixels and do not depend on these fonts.
 
 | Assets | Upstream | Pinned source |
 | --- | --- | --- |
-| `font_mono_12`, `18`, `24` | [IBM Plex Mono Medium](https://github.com/IBM/plex) | Revision `78cd4223d8de9fcb78cba84eadecb269c56093c5`, `packages/plex-mono/fonts/complete/ttf/IBMPlexMono-Medium.ttf` |
-| `font_mono_20` | [IBM Plex Mono Regular](https://github.com/IBM/plex) | Same revision, `packages/plex-mono/fonts/complete/ttf/IBMPlexMono-Regular.ttf` |
+| `font_mono_12`, `18`, `24`, `32` | [IBM Plex Mono Medium](https://github.com/IBM/plex) | Revision `78cd4223d8de9fcb78cba84eadecb269c56093c5`, `packages/plex-mono/fonts/complete/ttf/IBMPlexMono-Medium.ttf` |
+| `font_mono_20`, `font_mono_regular_24` | [IBM Plex Mono Regular](https://github.com/IBM/plex) | Same revision, `packages/plex-mono/fonts/complete/ttf/IBMPlexMono-Regular.ttf` |
 | `font_mono_semibold_12` | [IBM Plex Mono SemiBold](https://github.com/IBM/plex) | Same revision, `packages/plex-mono/fonts/complete/ttf/IBMPlexMono-SemiBold.ttf` |
 | `font_sans_12`, `14`, `16`, `20`, `24`, `32` | [Inter Medium](https://github.com/rsms/inter) | [Inter 4.1 release](https://github.com/rsms/inter/releases/tag/v4.1), `extras/ttf/Inter-Medium.ttf` |
 

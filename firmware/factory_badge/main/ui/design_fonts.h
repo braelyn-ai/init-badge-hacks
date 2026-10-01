@@ -11,6 +11,8 @@ LV_FONT_DECLARE(font_mono_12);
 LV_FONT_DECLARE(font_mono_18);
 LV_FONT_DECLARE(font_mono_20);
 LV_FONT_DECLARE(font_mono_24);
+LV_FONT_DECLARE(font_mono_32);
+LV_FONT_DECLARE(font_mono_regular_24);
 LV_FONT_DECLARE(font_mono_semibold_12);
 LV_FONT_DECLARE(font_sans_12);
 LV_FONT_DECLARE(font_sans_14);

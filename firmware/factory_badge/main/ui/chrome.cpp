@@ -50,8 +50,9 @@ void Chrome::update() {
     const bool profile_filled = context_.page == 3 &&
         (!model.name.empty() || !model.company.empty() || model.avatar ||
          std::any_of(model.socials.begin(), model.socials.end(), [](const auto& url) { return !url.empty(); }));
-    set_hidden(root_, context_.setup || context_.touch_test || context_.reset || profile_filled);
-    set_hidden(brand_, context_.page == 0);
+    // A configured Badge keeps only the page arrows: no brand mark or dots.
+    set_hidden(root_, context_.setup || context_.touch_test || context_.reset);
+    set_hidden(brand_, context_.page == 0 || profile_filled);
     set_hidden(status_root_, context_.setup || context_.touch_test || context_.reset);
     set_text(footer_, !model.photo_status.empty() ? model.photo_status
         : context_.page == SettingsPageIndex && model.settings_pending ? "Saving settings..." : "");
@@ -59,15 +60,16 @@ void Chrome::update() {
     set_hidden(left_, submenu);
     set_hidden(right_, submenu);
     const int count = visible_page_count(model);
-    if (page_ != context_.page || visible_count_ != count || submenu_ != submenu) {
-        submenu_ = submenu;
+    const bool dotless = submenu || profile_filled;
+    if (page_ != context_.page || visible_count_ != count || dotless_ != dotless) {
+        dotless_ = dotless;
         page_ = context_.page;
         visible_count_ = count;
         // Eight pixels between each square, including the wider active one.
         int x = (Width - (count * 8 + 4 + (count - 1) * 8)) / 2;
         for (int i = 0; i < PageCount; ++i) {
             const bool visible = page_visible(i, model);
-            set_hidden(dots_[i], !visible || submenu);
+            set_hidden(dots_[i], !visible || dotless);
             if (!visible) continue;
             const bool active = i == page_;
             lv_obj_set_pos(dots_[i], x, active ? 429 : 431);
