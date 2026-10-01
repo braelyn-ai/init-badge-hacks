@@ -774,3 +774,8 @@ footer and dots sit outside that band, so the targets do not overlap them. The
 icons keep their original positions; pressing dims the icon instead of filling
 the larger area. Host UI checks cover strip edges, hidden submenu arrows, the
 action geometry and save/no-op/failure paths.
+Follow-up the same day: Settings rows grew to 52px with 20px text and 12px
+separation (the 46px white action is unchanged); longer pages such as Settings
+home, Orientation and Date / time scroll natively instead of shrinking targets.
+Battery status moved from Brightness to Settings home, as muted 12px mono text
+directly under the title.

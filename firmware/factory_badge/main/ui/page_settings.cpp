@@ -51,12 +51,12 @@ public:
         lv_obj_set_style_text_font(back_icon, LV_FONT_DEFAULT, 0);
         lv_obj_set_style_text_color(back_icon, white(), 0);
         auto* home = home_ = page("Settings");
-        lv_obj_set_style_pad_row(home, 4, 0);
+        battery_ = text(home, "", &font_mono_12); // Status directly under the title.
+        lv_obj_set_style_text_color(battery_, muted(), 0);
         auto* light = page("Brightness");
         brightness_ = text(light, "", &font_sans_24);
         row(light, "Decrease", [this] { brightness(-10); });
         row(light, "Increase", [this] { brightness(10); });
-        battery_ = text(light, "", &font_mono_12);
         auto* rotation = page("Orientation");
         constexpr const char* modes[] = {"Free", "Default", "180°"};
         for (int i = 0; i < 3; ++i) orientation_[i] = row(rotation, modes[i], [this, i] {
@@ -115,7 +115,7 @@ public:
         auto* help = text(phone, "Connect to edit your badge and sync its clock.", &font_sans_16);
         lv_label_set_long_mode(help, LV_LABEL_LONG_WRAP);
         row(phone, "Connect phone", [this] { request_setup(context_); });
-        link(home, "Brightness", light);
+        auto* first_row = row(home, "Brightness", [this, light] { lv_menu_set_page(menu_, light); });
         link(home, "Orientation", rotation);
         row(home, "Date / time", [this] { begin_clock(); lv_menu_set_page(menu_, clock_page_); });
         link(home, "Hack this device", hack);
@@ -131,9 +131,9 @@ public:
         // Align the action with the rendered rows, whose inset includes the
         // menu's own content padding.
         lv_obj_update_layout(menu_);
-        lv_area_t first_row;
-        lv_obj_get_coords(lv_obj_get_child(home, 0), &first_row);
-        lv_obj_set_x(action_, first_row.x1);
+        lv_area_t row_bounds;
+        lv_obj_get_coords(first_row, &row_bounds);
+        lv_obj_set_x(action_, row_bounds.x1);
         begin_clock();
         page_changed();
         update();
@@ -148,7 +148,7 @@ public:
         }
     }
 private:
-    static constexpr int ActionTop = 354, ActionHeight = 46;
+    static constexpr int ActionTop = 354, ActionHeight = 46, RowHeight = 52, RowGap = 12;
     void page_changed() {
         auto* current = lv_menu_get_cur_main_page(menu_);
         const bool submenu = current && current != home_;
@@ -169,7 +169,7 @@ private:
         lv_obj_set_style_bg_color(p, lv_color_black(), 0);
         lv_obj_set_style_pad_hor(p, 8, 0);
         lv_obj_set_style_pad_ver(p, 0, 0);
-        lv_obj_set_style_pad_row(p, 6, 0);
+        lv_obj_set_style_pad_row(p, RowGap, 0);
         lv_obj_set_scrollbar_mode(p, LV_SCROLLBAR_MODE_OFF);
         return p;
     }
@@ -177,7 +177,11 @@ private:
         return label(parent, value.c_str(), 0, 0, 272, font, white());
     }
     lv_obj_t* row(lv_obj_t* parent, const char* title, std::function<void()> action) {
-        return button(parent, title, 0, 0, 272, 44, std::move(action)); // Square rows.
+        // Square rows, larger than the 46px action, with clear separation;
+        // longer pages scroll instead of shrinking targets.
+        auto* b = button(parent, title, 0, 0, 272, RowHeight, std::move(action));
+        set_font(lv_obj_get_child(b, 0), &font_sans_20);
+        return b;
     }
     void link(lv_obj_t* parent, const char* title, lv_obj_t* target) {
         row(parent, title, [this, target] { lv_menu_set_page(menu_, target); });

@@ -748,7 +748,10 @@ int main(int argc, char** argv) {
     assert(first_setting);
     lv_area_t first_setting_bounds;
     lv_obj_get_coords(lv_obj_get_parent(first_setting), &first_setting_bounds);
-    assert(first_setting_bounds.y1 == 100);
+    auto* battery = find_label(lv_screen_active(), "Battery 74%");
+    assert(battery);
+    lv_area_t battery_bounds; lv_obj_get_coords(battery, &battery_bounds);
+    assert(battery_bounds.y1 == 100 && first_setting_bounds.y1 > battery_bounds.y2);
     assert(first_setting_bounds.x1 == 98 && first_setting_bounds.x2 == 369);
     tap_text("Brightness");
     snapshot("settings-brightness");
