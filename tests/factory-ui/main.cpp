@@ -136,10 +136,14 @@ lv_obj_t* widget(lv_obj_t* obj, const lv_obj_class_t* type) {
         if (auto* result = widget(lv_obj_get_child(obj, i), type)) return result;
     return nullptr;
 }
+// Submenus return through the large white bottom action, never the chevron.
 void menu_back() {
     auto* menu = widget(lv_screen_active(), &lv_menu_class); assert(menu);
-    auto* back = lv_menu_get_main_header_back_button(menu);
-    lv_area_t box; lv_obj_get_coords(back, &box);
+    assert(lv_obj_has_flag(lv_menu_get_main_header_back_button(menu), LV_OBJ_FLAG_HIDDEN));
+    auto* done = action_label(lv_screen_active(), "Done"); assert(done);
+    lv_area_t box; lv_obj_get_coords(lv_obj_get_parent(done), &box);
+    // Same left edge and width as the menu rows (asserted on Settings home).
+    assert(box.x1 == 98 && box.x2 == 369 && box.y1 == 354 && box.y2 == 399);
     tap((box.x1 + box.x2) / 2, (box.y1 + box.y2) / 2);
 }
 lv_obj_t* find_image(lv_obj_t* object, const lv_image_dsc_t* source) {
@@ -733,11 +737,19 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Enlarged arrow strips reach the content edges (x=72/396, y=100..403) but
+    // stop before page content, the heading and the dots.
+    tap(70, 104); assert(badge::ui_page_index() == 3);
+    tap(398, 400); assert(badge::ui_page_index() == 4);
+    tap(70, 96); assert(badge::ui_page_index() == 4);   // Above the strip.
+    tap(70, 410); assert(badge::ui_page_index() == 4);  // Below the strip.
+
     auto* first_setting = action_label(lv_screen_active(), "Brightness");
     assert(first_setting);
     lv_area_t first_setting_bounds;
     lv_obj_get_coords(lv_obj_get_parent(first_setting), &first_setting_bounds);
     assert(first_setting_bounds.y1 == 100);
+    assert(first_setting_bounds.x1 == 98 && first_setting_bounds.x2 == 369);
     tap_text("Brightness");
     snapshot("settings-brightness");
     auto* increase = active_label(lv_screen_active(), "Increase"); assert(increase);
@@ -749,6 +761,7 @@ int main(int argc, char** argv) {
     assert(brightness == 0);
     tap_text("Increase"); assert(brightness == 70);
     menu_back(); tap_text("Orientation"); tap_text("180°"); assert(orientation == 2);
+    tap(434, 233); assert(badge::ui_page_index() == 4); // Page arrows are hidden in submenus.
     snapshot("settings-orientation");
     menu_back(); tap_text("Date / time");
     assert(clock_saves == 0);
@@ -760,12 +773,22 @@ int main(int argc, char** argv) {
     snapshot("settings-calendar"); menu_back();
     tap_text("Time"); snapshot("settings-time"); menu_back();
     assert(clock_saves == 0);
-    tap_text("Save date / time");
+    assert(!action_label(lv_screen_active(), "Done"));
+    tap_text("Save"); // An untouched draft returns without rewriting the RTC.
+    assert(clock_saves == 0 && action_label(lv_screen_active(), "Brightness"));
+    assert(!action_label(lv_screen_active(), "Save"));
+    tap_text("Date / time");
+    tap_text("UTC offset"); tap_text("Later (+15 min)"); tap_text("Earlier (-15 min)"); menu_back();
+    tap_text("Save");
     assert(clock_saves == 1 && saved_epoch == model.clock_epoch && saved_offset == 0);
-    assert(active_label(lv_screen_active(), "Date / time saved"));
-    clock_save_ok = false; tap_text("Save date / time");
+    assert(action_label(lv_screen_active(), "Brightness")); // Save returns to Settings.
+    tap_text("Date / time");
+    tap_text("UTC offset"); tap_text("Later (+15 min)"); menu_back();
+    clock_save_ok = false; tap_text("Save");
     assert(active_label(lv_screen_active(), "Could not save. Try again."));
-    menu_back();
+    assert(action_label(lv_screen_active(), "Save")); // A failed save stays put.
+    clock_save_ok = true; tap_text("Save");
+    assert(action_label(lv_screen_active(), "Brightness"));
     // Saving leap-day local midnight with a negative offset crosses UTC correctly.
     clock_save_ok = true;
     model.clock_epoch = 1709193600; model.utc_offset_minutes = -480;
@@ -774,9 +797,8 @@ int main(int argc, char** argv) {
     const int saves_before_draft = clock_saves;
     tap_text("UTC offset"); tap_text("Later (+15 min)"); menu_back();
     assert(clock_saves == saves_before_draft);
-    tap_text("Save date / time");
+    tap_text("Save");
     assert(saved_epoch == model.clock_epoch - 900 && saved_offset == -465);
-    menu_back();
     // A draft abandoned by leaving Settings never reaches the RTC callback.
     tap_text("Date / time"); tap_text("UTC offset"); tap_text("Earlier (-15 min)");
     const int saves_before_exit = clock_saves;

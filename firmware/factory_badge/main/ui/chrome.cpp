@@ -9,18 +9,25 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
     lv_obj_remove_flag(root_, LV_OBJ_FLAG_CLICKABLE);
     brand(root_, 24);
     brand_ = lv_obj_get_child(root_, -1);
-    auto* left = button(root_, "", 15, 170, 54, 126, [] { ui_page(-1); });
-    auto* right = button(root_, "", 398, 170, 54, 126, [] { ui_page(1); });
+    // Each arrow owns the full outer strip between the heading and the page
+    // dots. Page content stays within x=72..396, so the targets never overlap
+    // it; the icons keep their original positions.
+    constexpr int TargetWidth = 72, TargetTop = ContentTop, TargetHeight = ContentBottom - ContentTop;
+    constexpr int IconTop = 214 - TargetTop;
+    auto* left = button(root_, "", 0, TargetTop, TargetWidth, TargetHeight, [] { ui_page(-1); });
+    auto* right = button(root_, "", Width - TargetWidth, TargetTop, TargetWidth, TargetHeight, [] { ui_page(1); });
     for (auto* arrow : {left, right}) {
         lv_obj_set_style_bg_opa(arrow, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_bg_opa(arrow, LV_OPA_30, LV_STATE_PRESSED);
+        lv_obj_set_style_bg_opa(arrow, LV_OPA_TRANSP, LV_STATE_PRESSED);
+        lv_obj_set_style_opa(arrow, LV_OPA_50, LV_STATE_PRESSED); // Dim the icon, not a large patch.
         auto* image = lv_image_create(arrow);
         lv_image_set_src(image, arrow == left ? &supplied_left : &supplied_right);
         lv_obj_set_style_image_recolor(image, white(), 0);
         lv_obj_set_style_image_recolor_opa(image, LV_OPA_COVER, 0);
-        lv_obj_center(image);
+        lv_obj_set_pos(image, arrow == left ? 30 : 413 - (Width - TargetWidth), IconTop);
         lv_obj_remove_flag(image, LV_OBJ_FLAG_CLICKABLE);
     }
+    left_ = left; right_ = right;
     footer_ = label(root_, "", 114, 411, 240, &font_mono_12, muted());
     for (int i = 0; i < PageCount; ++i) {
         dots_[i] = container(root_, 0, 431, 8, 8);
@@ -39,15 +46,19 @@ void Chrome::update() {
     set_hidden(root_, context_.setup || context_.touch_test || context_.reset || profile_filled);
     set_hidden(brand_, context_.page == 0);
     set_text(footer_, context_.page == SettingsPageIndex && model.settings_pending ? "Saving settings..." : "");
+    const bool submenu = context_.page == SettingsPageIndex && context_.settings_submenu;
+    set_hidden(left_, submenu);
+    set_hidden(right_, submenu);
     const int count = visible_page_count(model);
-    if (page_ != context_.page || visible_count_ != count) {
+    if (page_ != context_.page || visible_count_ != count || submenu_ != submenu) {
+        submenu_ = submenu;
         page_ = context_.page;
         visible_count_ = count;
         // Eight pixels between each square, including the wider active one.
         int x = (Width - (count * 8 + 4 + (count - 1) * 8)) / 2;
         for (int i = 0; i < PageCount; ++i) {
             const bool visible = page_visible(i, model);
-            set_hidden(dots_[i], !visible);
+            set_hidden(dots_[i], !visible || submenu);
             if (!visible) continue;
             const bool active = i == page_;
             lv_obj_set_pos(dots_[i], x, active ? 429 : 431);

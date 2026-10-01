@@ -90,8 +90,12 @@
   init() 0, Schedule 1, Party 2, Badge 3, Settings 4. All except init() have a
   visible title; Badge retains its title even with a configured profile or QR.
   Use shared heading bounds (84,52,300) and content top 100, matching Schedule.
-  Settings has a fixed 48px native header with centered text and an independent
-  back button; menu history must not shift the heading or content downward.
+  Settings has a fixed 48px native header with centered text; menu history must
+  not shift the heading or content downward. Rows are square. Submenus hide the
+  page arrows, dots and header chevron and show one white bottom action at
+  y=354 (Save on Date / time, Done elsewhere) that returns via native menu
+  history; an untouched Date / time Save writes nothing. Page arrow targets are
+  the 72px outer strips from y=100 to 404, beside content at x=72..396.
   Its locked page hides the event name and says
   `tap the code to reveal a secret invitation`. Enter Morse
   `init` (`.. -. .. -`) with taps/holds across the page; arrows remain navigation

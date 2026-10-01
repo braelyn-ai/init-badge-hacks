@@ -756,3 +756,21 @@ non-gray pixels and equal-distance mid-gray ties are unchanged. The shared
 button and Settings rows render (24,24,24), the empty-portrait frame (16,16,16),
 and the former (16,20,16)/(0,4,0) pixels are gone. Max main-loop gap stayed
 237 ms during page changes.
+
+### September 30 Settings actions and arrow targets
+
+Settings rows are square (`radius 0`). Inside any submenu the chrome hides the
+page arrows and dots, and LVGL's header chevron stays hidden; a fixed white
+272×46 action at y=354, aligned with the rendered rows, is the only on-screen
+way back. It reads **Save** on Date / time and **Done** on every other page,
+including the Date, Time and UTC offset pickers (which return to Date / time).
+Save writes the clock only when the draft was edited; a failed save keeps the
+page and its error. Submenu content stops above the action. Physical pushers
+keep their page navigation.
+
+The previous/next arrows now own the outer 72px strips from y=100 to y=404
+instead of 54×126 boxes. Page content stays within x=72..396 and the heading,
+footer and dots sit outside that band, so the targets do not overlap them. The
+icons keep their original positions; pressing dims the icon instead of filling
+the larger area. Host UI checks cover strip edges, hidden submenu arrows, the
+action geometry and save/no-op/failure paths.

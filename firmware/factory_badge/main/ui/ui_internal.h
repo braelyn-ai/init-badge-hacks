@@ -32,6 +32,7 @@ struct Context {
     bool calibration = false;
     bool reset = false;
     bool reset_confirmed = false;
+    bool settings_submenu = false; // Hides page arrows/dots behind a Settings submenu.
     bool rebuild = false;
     uint8_t rotation = 2;
     UiTouchSample touch;
