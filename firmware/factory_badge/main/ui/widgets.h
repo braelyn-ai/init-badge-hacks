@@ -16,6 +16,9 @@ void set_font(lv_obj_t* object, const lv_font_t* font);
 lv_obj_t* label(lv_obj_t* parent, const char* text, int x, int y, int width,
                 const lv_font_t* font = &font_sans_16, lv_color_t color = white());
 lv_obj_t* page_heading(lv_obj_t* parent, const char* title);
+// Cuts the Schedule cards' square eight-pixel corner steps from an object after
+// its children draw (for images and QR codes on the black page background).
+void square_notches(lv_obj_t* object);
 lv_obj_t* button(lv_obj_t* parent, const char* text, int x, int y, int width, int height,
                  std::function<void()> action);
 // Release-only action with drag/hold cancellation, shared by buttons and QR cards.

@@ -52,9 +52,9 @@ public:
     }
 private:
     static constexpr int CardHeight = ContentBottom - ContentTop;
-    // A configured badge shows a larger rounded photo; its QR replaces the
-    // photo in exactly the same square.
-    static constexpr int PhotoSide = 208, PhotoX = (324 - PhotoSide) / 2, PhotoY = 0, PhotoRadius = 16;
+    // A configured badge shows a larger photo with the Schedule cards' square
+    // corner steps; its QR replaces the photo in exactly the same shape.
+    static constexpr int PhotoSide = 208, PhotoX = (324 - PhotoSide) / 2, PhotoY = 0;
     void scroll_to_model() {
         selected_ = std::clamp(context_.model.selected_network, 0, 2);
         lv_obj_scroll_to_y(list_, selected_ * CardHeight, LV_ANIM_OFF);
@@ -62,8 +62,6 @@ private:
     lv_obj_t* avatar(lv_obj_t* card, int x, int y, int side) {
         auto* frame = container(card, x, y, side, side);
         lv_obj_remove_flag(frame, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_style_radius(frame, PhotoRadius, 0);
-        lv_obj_set_style_clip_corner(frame, true, 0);
         auto* image = lv_image_create(frame);
         if (avatar_ && image_.header.w && image_.header.h) {
             lv_image_set_src(image, &image_);
@@ -112,9 +110,10 @@ private:
                 continue;
             }
             photos_[i] = avatar(card, PhotoX, PhotoY, PhotoSide);
+            square_notches(photos_[i]);
             if (!urls_[i].empty()) {
                 codes_[i] = qr(card, urls_[i], PhotoX, PhotoY, PhotoSide, 16);
-                lv_obj_set_style_radius(codes_[i], PhotoRadius, 0);
+                square_notches(codes_[i]);
                 set_hidden(codes_[i], true);
             }
             auto* name = label(card, name_.c_str(), 6, PhotoY + PhotoSide + 8, 312, &font_mono_32);
