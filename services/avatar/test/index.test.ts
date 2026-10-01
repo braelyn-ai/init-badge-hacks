@@ -50,9 +50,10 @@ describe('parse', () => {
 });
 
 describe('networks', () => {
-  it('match the badge firmware table exactly', () => {
+  it('match the badge firmware photo providers exactly', () => {
     const header = readFileSync(new URL('../../../firmware/factory_badge/main/social_networks.h', import.meta.url), 'utf8');
-    const keys = [...header.matchAll(/\{"([a-z]+)", "[^"]+", "https:\/\//g)].map(m => m[1]);
+    const providers = /Providers\[\] = \{([^}]*)\}/.exec(header)![1];
+    const keys = [...providers.matchAll(/"([a-z]+)"/g)].map(m => m[1]);
     expect(keys).toHaveLength(10);
     expect(Object.keys(HANDLES)).toEqual(keys);
   });

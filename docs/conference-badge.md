@@ -856,3 +856,11 @@ the per-network card scroll and its `network` NVS preference are retired (the
 key is left dormant and reset no longer writes it). USB status reports
 `social_network` (key) and a one-bit `configured_mask`. Host checks cover every
 network's parsing and URL, migration, the setup list and the relay table.
+Revision: the selectable list is trimmed to LinkedIn, X, GitHub, Hugging Face,
+YouTube and **Other (URL)**. Other stores an https link (at most 180 characters,
+a bare host gains `https://`) as the QR. Its photo is fetched only when the link
+matches a provider's profile form: the five named networks or Bluesky
+(`bsky.app/profile/…`), GitLab, Substack (`<name>.substack.com`), Dribbble or
+Threads; otherwise the badge keeps the QR only and setup says so. The gray QR
+label is the network, the recognized provider, or the link's host. The relay
+still serves all ten providers.

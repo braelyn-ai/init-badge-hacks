@@ -96,6 +96,7 @@ void refreshModel() {
     model.schedule_bookmarks = bookmarks.mask();
     model.social_network = profile.profile.network;
     model.social_url = badge_social::url(profile.profile.network, profile.profile.handle);
+    model.social_label = badge_social::photo_source(profile.profile.network, profile.profile.handle).label;
     model.avatar = profile.avatar && !profile.avatar->empty() ? profile.avatar->data() : nullptr;
     model.avatar_width = model.avatar_height = model.avatar ? 160 : 0;
     model.profile_revision = profile.revision;

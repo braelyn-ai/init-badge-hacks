@@ -24,6 +24,7 @@ struct UiModel {
     // profile URL, which the Badge QR opens.
     int social_network = -1;
     std::string social_url;
+    std::string social_label; // Gray name above the QR: the network, or an Other link's host.
     std::string clock_text = "--:--";
     std::string date_text = "Date / time not set";
     const uint16_t* avatar = nullptr;

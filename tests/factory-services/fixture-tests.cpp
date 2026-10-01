@@ -19,10 +19,10 @@ void check_form(){
  badge::Profile previous;previous.company="Keep this company";badge::Profile candidate;std::string error;
  Form legacy{{"name","  Sample Attendee  "},{"network","github"},{"handle","https://github.com/example"},{"image","keep"},{"imageToken",""}};
  assert(badge::profile_form(&legacy.root,previous,candidate,error));
- assert(candidate.name=="Sample Attendee"&&candidate.company==previous.company&&candidate.network==0&&candidate.handle=="example");
- Form account{{"name","Sample"},{"network","bluesky"},{"handle","Chantastic"},{"image","keep"},{"imageToken",""}};
- assert(badge::profile_form(&account.root,previous,candidate,error)&&candidate.network==3&&candidate.handle=="chantastic.bsky.social");
- account.fields[2].valuestring="not a handle!";assert(!badge::profile_form(&account.root,previous,candidate,error)&&error.find("Bluesky")!=std::string::npos);
+ assert(candidate.name=="Sample Attendee"&&candidate.company==previous.company&&candidate.network==badge_social::find("github")&&candidate.handle=="example");
+ Form account{{"name","Sample"},{"network","url"},{"handle","bsky.app/profile/Chantastic"},{"image","keep"},{"imageToken",""}};
+ assert(badge::profile_form(&account.root,previous,candidate,error)&&candidate.network==badge_social::find("url")&&candidate.handle=="https://bsky.app/profile/Chantastic");
+ account.fields[2].valuestring="not a link!";assert(!badge::profile_form(&account.root,previous,candidate,error)&&error.find("https://")!=std::string::npos);
  account.fields[1].valuestring="myspace";account.fields[2].valuestring="tom";assert(!badge::profile_form(&account.root,previous,candidate,error));
  Form full{{"name","Sample"},{"network","github"},{"handle",""},{"image","keep"},{"imageToken",""},{"company","  Research & Development  "}};
  assert(badge::profile_form(&full.root,previous,candidate,error)&&candidate.company=="Research & Development");
@@ -42,37 +42,52 @@ void check_form(){
  auto imageToken=full.fields[4].string;full.fields[4].string="company";assert(!badge::profile_form(&full.root,previous,candidate,error));full.fields[4].string=imageToken;
 }
 void check_networks(){
- // Each network accepts a bare handle, @handle or its profile URL and builds a short QR URL.
+ // Five named networks plus Other (URL); each accepts a handle, @handle or profile URL.
  struct Case{const char* key;const char* input;const char* handle;const char* url;};
  const Case cases[]={
-  {"github","https://github.com/Octo-Cat/","Octo-Cat","https://github.com/Octo-Cat"},
-  {"x","https://twitter.com/example_1/","example_1","https://x.com/example_1"},
   {"linkedin","https://www.linkedin.com/in/michael-chan-1234/","michael-chan-1234","https://linkedin.com/in/michael-chan-1234"},
-  {"bluesky","https://bsky.app/profile/Chan.Dev","chan.dev","https://bsky.app/profile/chan.dev"},
-  {"bluesky","@chantastic","chantastic.bsky.social","https://bsky.app/profile/chantastic.bsky.social"},
+  {"x","https://twitter.com/example_1/","example_1","https://x.com/example_1"},
+  {"github","https://github.com/Octo-Cat/","Octo-Cat","https://github.com/Octo-Cat"},
   {"huggingface","julien-c","julien-c","https://huggingface.co/julien-c"},
   {"youtube","https://www.youtube.com/@GitHub","GitHub","https://youtube.com/@GitHub"},
-  {"gitlab","gitlab.com/sytses","sytses","https://gitlab.com/sytses"},
-  {"substack","https://Bankless.substack.com/","bankless","https://bankless.substack.com"},
-  {"dribbble","omidnikrah","omidnikrah","https://dribbble.com/omidnikrah"},
-  {"threads","https://www.threads.net/@zuck?x=1","zuck","https://threads.net/@zuck"},
+  {"url","bsky.app/profile/chan.dev","https://bsky.app/profile/chan.dev","https://bsky.app/profile/chan.dev"},
+  {"url","http://chan.dev/about","https://chan.dev/about","https://chan.dev/about"},
  };
- assert(badge_social::Count==10);
+ assert(badge_social::Count==6&&std::string(badge_social::Networks[5].key)=="url");
  for(const auto& c:cases){
   const int n=badge_social::find(c.key);assert(n>=0);
   const auto h=badge_social::handle(n,c.input);
   if(h!=c.handle)std::fprintf(stderr,"%s %s -> %s\n",c.key,c.input,h.c_str());
   assert(h==c.handle&&badge_social::url(n,h)==c.url);
  }
- const std::pair<const char*,const char*> rejected[]={{"github","-bad"},{"github","a--b"},{"github","https://github.com.evil/account"},
-  {"x","way_too_long_handle"},{"bluesky","bad..dev"},{"substack","a.b"},{"youtube","ab"},{"threads","bad-name"},{"dribbble","x"}};
- for(auto [key,input]:rejected)assert(badge_social::handle(badge_social::find(key),input).empty());
+ const std::pair<std::string,std::string> rejected[]={{"github","-bad"},{"github","a--b"},{"github","https://github.com.evil/account"},
+  {"x","way_too_long_handle"},{"youtube","ab"},{"url","not a link"},{"url","https://nodot/x"},{"url","https://a.com/\"quote"},
+  {"url","https://example.com/"+std::string(170,'a')},{"bluesky","chan.dev"}};
+ for(const auto& [key,input]:rejected)assert(badge_social::handle(badge_social::find(key),input).empty());
+ // Other links get a photo only when they match a provider's profile form.
+ const int url=badge_social::find("url");
+ struct Source{const char* link;const char* provider;const char* handle;const char* label;};
+ const Source sources[]={
+  {"https://bsky.app/profile/Chan.Dev","bluesky","chan.dev","Bluesky"},
+  {"https://gitlab.com/sytses","gitlab","sytses","GitLab"},
+  {"https://bankless.substack.com/","substack","bankless","Substack"},
+  {"https://dribbble.com/omidnikrah","dribbble","omidnikrah","Dribbble"},
+  {"https://www.threads.net/@zuck?x=1","threads","zuck","Threads"},
+  {"https://github.com/octocat","github","octocat","GitHub"},
+  {"https://www.linkedin.com/in/someone/","linkedin","someone","LinkedIn"},
+ };
+ for(const auto& c:sources){auto s=badge_social::photo_source(url,c.link);assert(s.provider&&std::string(s.provider)==c.provider&&s.handle==c.handle&&s.label==c.label);}
+ for(const char* qr_only:{"https://chan.dev/about","https://github.com/orgs/workos","https://bsky.app/search"}){
+  auto s=badge_social::photo_source(url,qr_only);assert(!s.provider&&!s.label.empty());
+ }
+ assert(badge_social::photo_source(url,"https://www.chan.dev/").label=="chan.dev");
+ auto named=badge_social::photo_source(badge_social::find("youtube"),"GitHub");assert(std::string(named.provider)=="youtube"&&named.label=="YouTube");
  assert(badge_social::find("myspace")<0&&badge_social::url(-1,"a").empty());
 }
 void check_metadata(){
- badge::Profile p;p.name="Attendee";p.company="Company";p.network=0;p.handle="example";
+ badge::Profile p;p.name="Attendee";p.company="Company";p.network=badge_social::find("github");p.handle="example";
  uint8_t metadata[badge::kMetadata];auto n=badge::encode(p,metadata,3);assert(n&&n<sizeof(metadata));
- badge::Profile result;assert(badge::decode(metadata,n,3,result)&&result.company==p.company&&result.network==0&&result.handle=="example");
+ badge::Profile result;assert(badge::decode(metadata,n,3,result)&&result.company==p.company&&result.network==p.network&&result.handle=="example");
  assert(!badge::encode(p,metadata,2)&&!badge::encode(p,metadata,1));assert(!badge::decode(metadata,n,4,result));
  for(size_t cut=0;cut<n;++cut)assert(!badge::decode(metadata,cut,3,result));
  metadata[n]=0;assert(!badge::decode(metadata,n+1,3,result));
@@ -87,13 +102,13 @@ void check_metadata(){
   const size_t used=badge::put_fields(pointers.data(),pointers.size(),metadata);
   return badge::decode(metadata,used,version,result);
  };
- assert(legacy(1,{"Old","","https://x.com/example_1","https://www.linkedin.com/in/someone/"})&&result.network==1&&result.handle=="example_1"&&result.company.empty());
- assert(legacy(2,{"Old","","","https://www.linkedin.com/in/someone/","Co"})&&result.network==2&&result.handle=="someone"&&result.company=="Co");
+ assert(legacy(1,{"Old","","https://x.com/example_1","https://www.linkedin.com/in/someone/"})&&result.network==badge_social::find("x")&&result.handle=="example_1"&&result.company.empty());
+ assert(legacy(2,{"Old","","","https://www.linkedin.com/in/someone/","Co"})&&result.network==badge_social::find("linkedin")&&result.handle=="someone"&&result.company=="Co");
  assert(legacy(2,{"Old","","","",""})&&result.network==-1);
  assert(!legacy(2,{"Old","https://github.com/-bad","","",""}));
  assert(!legacy(1,{"Old","","","","Co"})); // v1 has exactly four fields; a fifth is trailing data.
  p.company.clear();for(int i=0;i<60;++i){p.name=i? p.name+"\xc3\xa9":"\xc3\xa9";p.company+="\xc3\xa9";}
- p.network=3;p.handle=std::string(60,'a')+"."+std::string(60,'b')+"."+std::string(60,'c')+".dev";
+ p.network=badge_social::find("url");p.handle="https://example.com/"+std::string(160,'a');
  assert(badge::profile_valid(p));n=badge::encode(p,metadata,3);assert(n<=badge::kMetadata&&badge::decode(metadata,n,3,result));assert(result.name==p.name&&result.company==p.company&&result.handle==p.handle);
 }
 void check_prefill(){
@@ -167,7 +182,7 @@ int main(int argc,char**argv){
  const auto legacyRecord=bytes(badge::record_path);
  badge::ProfileSnapshot imported;imported.profile.company="Must clear on legacy read";
  assert(badge::read_record(badge::record_path.c_str(),imported));assert(imported.profile.name==old.name.c_str()&&imported.profile.company.empty());
- assert(imported.profile.network==0&&imported.profile.handle=="example"); // Old GitHub slot becomes the account.assert(imported.avatar&&imported.avatar->size()==25600);assert(memcmp(imported.avatar->data(),legacy.avatarPixels(),51200)==0);
+ assert(imported.profile.network==badge_social::find("github")&&imported.profile.handle=="example"); // Old GitHub slot becomes the account.assert(imported.avatar&&imported.avatar->size()==25600);assert(memcmp(imported.avatar->data(),legacy.avatarPixels(),51200)==0);
  assert(bytes(badge::record_path)==legacyRecord); // Reading the old format never migrates or erases it.
  imported.ready=true;badge::stored=imported;auto next=imported.profile;next.name="Changed Native";next.network=1;next.handle="example_1";std::string error;assert(badge::save_record(next,nullptr,0,false,error));
  assert(badge::u16(bytes(badge::record_path).data()+8)==3); // Writes are single-account v3.
@@ -189,5 +204,5 @@ int main(int argc,char**argv){
  native_mountable=true;assert(badge::profile_initialize_for_conference()&&format_calls==0&&badge::stored.profile.name==next.name);
  badge::stored.ready=false;native_mountable=false;native_mounted=false;assert(badge::profile_initialize_for_conference()&&format_calls==1&&badge::stored.profile.name.empty());
  assert(badge::profile_initialize_for_conference()&&format_calls==1);
- std::filesystem::remove_all(root);puts("Native services: legacy v1/v2 three-slot to one-account migration, v3 record, ten-network handles, company bounds/schema/prefill, corruption, atomic failures, image removal, queued profile reset and initialization guards passed");
+ std::filesystem::remove_all(root);puts("Native services: legacy v1/v2 three-slot to one-account migration, v3 record, five networks plus Other links with provider recognition, company bounds/schema/prefill, corruption, atomic failures, image removal, queued profile reset and initialization guards passed");
 }

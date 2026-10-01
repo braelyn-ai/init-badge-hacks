@@ -1059,8 +1059,9 @@ int main(int argc, char** argv) {
     assert(badge::ui_page_index() == 3);
     model.name = "Conference attendee";
     model.company = "WorkOS";
-    model.social_network = 0;
+    model.social_network = 2;
     model.social_url = "https://github.com/octocat";
+    model.social_label = "GitHub";
     model.profile_revision = 1;
     std::vector<uint16_t> avatar(160 * 160, 0xf800);
     model.avatar = avatar.data();
@@ -1093,7 +1094,7 @@ int main(int argc, char** argv) {
     assert_idle();
 
     // Any table network labels its QR; switching networks rebuilds the card.
-    model.social_network = 3; model.social_url = "https://bsky.app/profile/chan.dev"; ++model.profile_revision;
+    model.social_network = 5; model.social_url = "https://bsky.app/profile/chan.dev"; model.social_label = "Bluesky"; ++model.profile_revision;
     badge::ui_update(model);
     spin();
     assert(!visible_label("GitHub"));
@@ -1107,7 +1108,7 @@ int main(int argc, char** argv) {
     // profile change must not leave a code showing for stale profile data.
     model.name.clear(); model.company.clear(); model.avatar = nullptr;
     model.avatar_width = model.avatar_height = 0;
-    model.social_network = 0; model.social_url = "https://github.com/octocat"; ++model.profile_revision;
+    model.social_network = 2; model.social_url = "https://github.com/octocat"; model.social_label = "GitHub"; ++model.profile_revision;
     badge::ui_update(model); spin();
     tap(234, 180); spin();
     assert(visible_label("GitHub") && lit_pixels(130, 100, 338, 308) > 20000);

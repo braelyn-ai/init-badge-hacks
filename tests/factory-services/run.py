@@ -42,8 +42,8 @@ assert script, "Native portal asset must contain its local browser script"
 run("node", "--check", OUT / "portal.js")
 # The setup page's network select and labels must match the firmware table.
 import re
-table = re.findall(r'\{"([a-z]+)", "([^"]+)", "https://', (ROOT / "firmware/factory_badge/main/social_networks.h").read_text())
-assert len(table) == 10, table
+table = re.findall(r'\{"([a-z]+)", "([^"]+)", "(?:https://[^"]*)?", Rule::', (ROOT / "firmware/factory_badge/main/social_networks.h").read_text())
+assert [key for key, _ in table] == ["linkedin", "x", "github", "huggingface", "youtube", "url"], table
 options = re.findall(r'<option value="([a-z]+)">([^<]+)</option>', asset[asset.index('id="network"'):asset.index('id="handle"')])
 labels = dict(re.findall(r"([a-z]+):'([^']+)'", re.search(r"const networkNames=\{([^}]*)\}", asset).group(1)))
 assert options == table and labels == dict(table), (options, labels, table)

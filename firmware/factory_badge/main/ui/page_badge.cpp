@@ -1,6 +1,5 @@
 #include "widgets.h"
 #include "design_assets.h"
-#include "../social_networks.h"
 
 namespace badge::ui {
 // One card for the badge's single social account. A blank badge shows the
@@ -25,7 +24,7 @@ public:
     void update() override {
         const auto& model = context_.model;
         if (revision_ != model.profile_revision || name_ != model.name || company_ != model.company ||
-            url_ != model.social_url || network_index_ != model.social_network || avatar_ != model.avatar) rebuild();
+            url_ != model.social_url || label_ != model.social_label || avatar_ != model.avatar) rebuild();
     }
 private:
     static constexpr int PhotoSide = 208, PhotoX = (324 - PhotoSide) / 2, PhotoY = 0, PhotoRadius = 16;
@@ -58,7 +57,7 @@ private:
         lv_image_cache_drop(&image_);
 #endif
         revision_ = model.profile_revision; name_ = model.name; company_ = model.company;
-        url_ = model.social_url; network_index_ = model.social_network; avatar_ = model.avatar;
+        url_ = model.social_url; label_ = model.social_label; avatar_ = model.avatar;
         image_ = {};
         image_.header.magic = LV_IMAGE_HEADER_MAGIC;
         image_.header.cf = LV_COLOR_FORMAT_RGB565;
@@ -91,20 +90,19 @@ private:
         on_tap(tap_plane, [this] { toggle_code(); });
     }
     void toggle_code() {
-        if (!code_ || network_index_ < 0 || network_index_ >= badge_social::Count) return;
+        if (!code_) return;
         showing_code_ = !showing_code_;
         set_hidden(photo_, showing_code_);
         set_hidden(code_, !showing_code_);
-        set_text(network_, badge_social::Networks[network_index_].label);
+        set_text(network_, label_);
         set_hidden(network_, !showing_code_);
     }
     lv_obj_t *heading_ = nullptr, *network_ = nullptr, *card_ = nullptr, *photo_ = nullptr, *code_ = nullptr;
     bool showing_code_ = false;
     uint32_t revision_ = 0;
-    int network_index_ = -1;
     const uint16_t* avatar_ = nullptr;
     lv_image_dsc_t image_{};
-    std::string name_, company_, url_;
+    std::string name_, company_, url_, label_;
 };
 std::unique_ptr<PageView> make_badge(Context& c, lv_obj_t* p) { return std::make_unique<BadgePage>(c, p); }
 } // namespace badge::ui
