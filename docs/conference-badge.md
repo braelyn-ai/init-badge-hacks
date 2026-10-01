@@ -818,7 +818,7 @@ clears the other two, so the Badge page shows one card whose QR opens that
 profile (cards without an account are hidden; older multi-account records still
 show each filled card). **Photo** is a select: From my social network (default
 without a saved photo), Upload from this phone (reveals the upload controls),
-Keep current photo (default with one) or No photo. **Wi-Fi** is a select: Event
-Wi-Fi (default) or Another network, which reveals name and password. Prefill uses
+Keep current photo (default with one) or No photo. **Wi-Fi** is a select: `init() attendee`
+(default) or Other (phone hotspot, home Wi-Fi…), which reveals name and password. Prefill uses
 the first saved account; template tokens are substituted in reverse document
 order. Host checks cover the scripts; a real phone had not yet been tried.
