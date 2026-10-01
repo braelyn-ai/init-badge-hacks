@@ -102,6 +102,21 @@ void refreshModel() {
     model.brightness_percent = settings.brightness;
     model.orientation = static_cast<badge::Orientation>(settings.orientation);
     model.settings_pending = settings.pending() || bookmarks.pending();
+    {
+        // Progress, then the outcome for a few seconds, on every page.
+        static badge::WifiFetchState shown = badge::WifiFetchState::Idle;
+        static uint32_t finishedAt = 0;
+        const auto fetch = badge::wifi_fetch_snapshot();
+        const bool terminal = fetch.state == badge::WifiFetchState::Succeeded || fetch.state == badge::WifiFetchState::Failed;
+        if (terminal && shown != fetch.state) finishedAt = board::millis();
+        shown = fetch.state;
+        model.photo_status.clear();
+        if (fetch.photo_network >= 0) {
+            if (!terminal && fetch.state != badge::WifiFetchState::Idle) model.photo_status = "Getting your photo...";
+            else if (terminal && uint32_t(board::millis() - finishedAt) < 6000)
+                model.photo_status = fetch.state == badge::WifiFetchState::Succeeded ? "Photo updated" : fetch.error;
+        }
+    }
     model.clock_text = badge_clock::timeText();
     model.date_text = badge_clock::dateText();
     model.clock_valid = badge_clock::valid();
@@ -147,6 +162,7 @@ void status(const char* nonce) {
     auto fetch = badge::wifi_fetch_snapshot();
     data["wifi_fetch_state"] = int(fetch.state); data["wifi_fetch_http"] = fetch.http_status;
     data["wifi_fetch_bytes"] = fetch.bytes;
+    data["photo_network"] = fetch.photo_network; data["photo_error"] = fetch.error;
     data["bluetooth"] = 0; data["ap_clients"] = portal.clients;
     data["touch_calibration_version"] = touch_mapping::version();
     data["calibration_active"] = badge::ui_calibration_active();
@@ -274,6 +290,22 @@ void command(JsonDocument& data) {
         std::fill(temporary.password.begin(), temporary.password.end(), '\0');
         JsonDocument result; result["ok"] = ok; result["nonce"] = nonce;
         reply("WIFI_FETCH_ACK ", result);
+    }
+    else if (!strcmp(op, "photo_fetch") && badge_clock::validNonce(nonce)) {
+        // USB diagnostic: optional public test handle and RAM-only test Wi-Fi.
+        badge::WifiCredentials temporary;
+        const bool provided = data["ssid"].is<const char*>() && data["password"].is<const char*>();
+        if (provided) {
+            temporary.ssid = data["ssid"].as<std::string>();
+            temporary.password = data["password"].as<std::string>();
+        }
+        const bool named = data["handle"].is<const char*>();
+        const std::string handle = named ? data["handle"].as<std::string>() : std::string();
+        const bool ok = !setupRequested && badge::photo_fetch_request(data["network"] | -1,
+            provided ? &temporary : nullptr, named ? &handle : nullptr);
+        std::fill(temporary.password.begin(), temporary.password.end(), '\0');
+        JsonDocument result; result["ok"] = ok; result["nonce"] = nonce;
+        reply("PHOTO_FETCH_ACK ", result);
     }
     else if (!strcmp(op, "touch_test_status")) touchStatus(nonce);
     else if (!strcmp(op, "calibrate_touch")) {

@@ -36,6 +36,13 @@ void check_form(){
  full.fields[0].type=2;assert(!badge::profile_form(&full.root,previous,candidate,error));full.fields[0].type=1;
  auto imageToken=full.fields[5].string;full.fields[5].string="company";assert(!badge::profile_form(&full.root,previous,candidate,error));full.fields[5].string=imageToken;
 }
+void check_photo_handles(){
+ // Photo requests use the bare handle recovered from each canonical profile URL.
+ const char* inputs[3]={"Octo-Cat","@Chan_Tastic","https://linkedin.com/in/michael-chan-1234/"};
+ const char* handles[3]={"Octo-Cat","Chan_Tastic","michael-chan-1234"};
+ for(unsigned i=0;i<3;++i){std::string url;assert(badge::social_url(i,inputs[i],url));assert(badge::social_handle(i,url)==handles[i]);}
+ assert(badge::social_handle(0,"").empty()&&badge::social_handle(1,"https://github.com/x").empty()&&badge::social_handle(3,"https://x.com/a").empty());
+}
 void check_metadata(){
  badge::Profile p;p.name="Attendee";p.company="Company";p.urls[0]="https://github.com/example";
  uint8_t metadata[badge::kMetadata];auto n=badge::encode(p,metadata,2);assert(n&&n<sizeof(metadata));
@@ -139,7 +146,7 @@ int main(int argc,char**argv){
  next.company.clear();assert(badge::save_record(next,nullptr,0,false,error));assert(badge::u16(bytes(badge::record_path).data()+8)==1);
  {ConferenceProfileStore loaded;assert(loaded.begin());assert(loaded.profile().name==next.name.c_str());assert(!loaded.avatarPixels());}
  std::string name,url;assert(badge::name_valid("  Jos\xc3\xa9  ",name)&&name=="Jos\xc3\xa9");assert(!badge::name_valid("line\nbreak",name));assert(!badge::name_valid(std::string("a\0b",3),name));assert(badge::social_url(1,"https://twitter.com/example_1/",url)&&url=="https://x.com/example_1");assert(!badge::social_url(0,"https://github.com.evil/account",url));
- check_metadata();check_form();check_prefill();check_reset(jpeg);
+ check_metadata();check_form();check_photo_handles();check_prefill();check_reset(jpeg);
  assert(badge::profile_initialize_for_conference()&&format_calls==0);
  badge::stored.ready=false;badge::portal.active=true;assert(!badge::profile_initialize_for_conference()&&format_calls==0);badge::portal.active=false;
  for(size_t i=0;i<partitions.size();++i){partitions[i].address++;assert(!badge::profile_initialize_for_conference()&&format_calls==0);partitions[i].address--;}

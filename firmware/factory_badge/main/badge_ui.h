@@ -34,6 +34,7 @@ struct UiModel {
     Orientation orientation = Orientation::Default;
     int selected_network = 0;
     bool settings_pending = false;
+    std::string photo_status; // Footer text while a photo downloads and briefly after.
     bool clock_valid = false;
     bool after_dark_unlocked = false;
     int schedule_minute = -1; // Local minute of day; -1 when the clock is unset.

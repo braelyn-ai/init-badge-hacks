@@ -34,11 +34,18 @@ struct WifiFetchSnapshot {
   WifiFetchState state = WifiFetchState::Idle;
   int http_status = 0;
   unsigned bytes = 0;
+  int photo_network = -1; // 0 GitHub, 1 X, 2 LinkedIn when replacing the photo.
+  std::string error;      // Short attendee-facing reason for a failed photo.
 };
 // One explicit, bounded HTTPS read. The service worker owns the entire station
 // lifecycle and returns to Wi-Fi off before reporting a terminal state.
 // temporary is used only for a local diagnostic; it is never saved to NVS.
 bool wifi_fetch_request(const WifiCredentials* temporary = nullptr);
+// Queues one avatar.chan.dev photo fetch for a social handle; it starts only
+// after setup Wi-Fi has stopped, uses the same bounded join/read/disconnect,
+// and replaces just the photo after Wi-Fi is off. handle defaults to the saved
+// profile's (USB diagnostics may pass a public test handle).
+bool photo_fetch_request(int network, const WifiCredentials* temporary = nullptr, const std::string* handle = nullptr);
 WifiFetchSnapshot wifi_fetch_snapshot();
 // Callback runs on the HTTP task; board/clock implementation must serialize RTC
 // access and return success only after RTC, system clock and NVS readback.

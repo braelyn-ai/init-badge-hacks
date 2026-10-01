@@ -28,7 +28,11 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
         lv_obj_remove_flag(image, LV_OBJ_FLAG_CLICKABLE);
     }
     left_ = left; right_ = right;
-    footer_ = label(root_, "", 114, 411, 240, &font_mono_12, muted());
+    status_root_ = container(parent, 0, 0, Width, Height);
+    lv_obj_center(status_root_);
+    lv_obj_remove_flag(status_root_, LV_OBJ_FLAG_CLICKABLE);
+    footer_ = label(status_root_, "", 94, 411, 280, &font_mono_12, muted());
+    lv_obj_set_style_text_align(footer_, LV_TEXT_ALIGN_CENTER, 0);
     for (int i = 0; i < PageCount; ++i) {
         dots_[i] = container(root_, 0, 431, 8, 8);
         lv_obj_remove_flag(dots_[i], LV_OBJ_FLAG_CLICKABLE);
@@ -36,8 +40,11 @@ Chrome::Chrome(Context& context, lv_obj_t* parent) : context_(context) {
     }
     update();
 }
-Chrome::~Chrome() { if (root_) lv_obj_delete(root_); }
-void Chrome::reflow() { lv_obj_center(root_); }
+Chrome::~Chrome() {
+    if (status_root_) lv_obj_delete(status_root_);
+    if (root_) lv_obj_delete(root_);
+}
+void Chrome::reflow() { lv_obj_center(root_); lv_obj_center(status_root_); }
 void Chrome::update() {
     const auto& model = context_.model;
     const bool profile_filled = context_.page == 3 &&
@@ -45,7 +52,9 @@ void Chrome::update() {
          std::any_of(model.socials.begin(), model.socials.end(), [](const auto& url) { return !url.empty(); }));
     set_hidden(root_, context_.setup || context_.touch_test || context_.reset || profile_filled);
     set_hidden(brand_, context_.page == 0);
-    set_text(footer_, context_.page == SettingsPageIndex && model.settings_pending ? "Saving settings..." : "");
+    set_hidden(status_root_, context_.setup || context_.touch_test || context_.reset);
+    set_text(footer_, !model.photo_status.empty() ? model.photo_status
+        : context_.page == SettingsPageIndex && model.settings_pending ? "Saving settings..." : "");
     const bool submenu = context_.page == SettingsPageIndex && context_.settings_submenu;
     set_hidden(left_, submenu);
     set_hidden(right_, submenu);

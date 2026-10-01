@@ -785,3 +785,24 @@ Later the same day the Date / time submenu was removed in favor of the captive
 portal's browser clock sync (see `conference-clock.md`), so every submenu's white
 action now reads **Done**. Settings home is Brightness, Orientation, Calibrate
 touch, Hack this device, Connect phone and Reset.
+
+### October 1 photo download
+
+Phone setup's **Photo** picker offers "Use my GitHub / X / LinkedIn photo" beside
+upload. The matching handle is required; nothing is uploaded from the phone. Save
+badge stores the profile with the current photo and queues one fetch. The
+service task starts it only after the setup AP has stopped: it joins the saved or
+built-in event network, GETs `https://avatar.chan.dev/v1/<network>/<handle>`
+(certificate-checked, at most 128 KiB, no redirects), turns Wi-Fi off, then
+replaces only the photo, and only if the profile still has that handle. The
+footer shows "Getting your photo..." and then "Photo updated" or a short reason
+for 6 seconds on every page. The relay itself is `services/avatar/`.
+
+Device check, same day: after a confirmed Reset badge, the USB `photo_fetch`
+diagnostic (public `octocat` handle, temporary Wi-Fi held only in RAM) reached
+HTTP 200 with 4,315 bytes; Wi-Fi was off about 4 s after the request, and the
+Badge page showed the photo with "Photo updated". A screen capture taken during
+the fetch was garbled, consistent with bytes dropped from the USB capture stream
+while Wi-Fi was active; the capture afterward was clean. The physical screen
+during the fetch was not observed. The badge was reset to stock again afterward.
+The phone-driven path was covered by host checks only.

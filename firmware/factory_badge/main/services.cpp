@@ -42,6 +42,13 @@ ProfileSnapshot stored;
 PortalSnapshot portal;
 WifiFetchSnapshot fetch_state;
 WifiCredentials fetch_credentials;
+// The queued photo target (portal_mutex). from_profile photos are saved only if
+// the profile still has that handle when the download finishes.
+int fetch_photo_network = -1;
+std::string fetch_photo_handle;
+bool fetch_photo_from_profile = false;
+constexpr size_t kPhotoMaxBytes = 128 * 1024; // The decoder's JPEG limit.
+constexpr const char* kPhotoNetworks[3] = {"github", "x", "linkedin"};
 ProfileResetSnapshot reset_state; // Protected by portal_mutex with AP lifecycle.
 PhoneClockSync sync_clock;
 std::atomic<bool> requested{false}, running{false};
@@ -100,6 +107,14 @@ bool social_url(unsigned network, const std::string& input, std::string& result)
   }
   result = std::string(network == 0 ? "https://github.com/" : network == 1 ? "https://x.com/" : "https://www.linkedin.com/in/") + handle + (network == 2 ? "/" : "");
   return true;
+}
+// Canonical profile URL (from social_url) back to its bare handle.
+std::string social_handle(unsigned network, const std::string& url) {
+  static const char* prefixes[3] = {"https://github.com/", "https://x.com/", "https://www.linkedin.com/in/"};
+  if (network > 2 || url.rfind(prefixes[network], 0) != 0) return {};
+  auto handle = url.substr(strlen(prefixes[network]));
+  if (!handle.empty() && handle.back() == '/') handle.pop_back();
+  return handle;
 }
 bool profile_valid(const Profile& p) {
   std::string value; if (!name_valid(p.name, value) || value != p.name) return false;
@@ -373,9 +388,15 @@ bool station_test_connection(const WifiCredentials& credentials) {
   if (!restored) return false;
   return joined;
 }
-WifiFetchSnapshot fetch_once(const WifiCredentials& credentials) {
+// photo_network < 0 is the 1 KiB connectivity probe; otherwise the complete
+// avatar JPEG (at most kPhotoMaxBytes) is returned in body for saving after
+// Wi-Fi is off.
+WifiFetchSnapshot fetch_once(const WifiCredentials& credentials, int photo_network,
+                             const std::string& handle, std::vector<uint8_t>& body) {
   WifiFetchSnapshot result;
   result.state = WifiFetchState::Failed;
+  result.photo_network = photo_network;
+  result.error = "Couldn't join Wi-Fi";
   if (!station_netif) station_netif = esp_netif_create_default_wifi_sta();
   if (!station_netif) return result;
   wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
@@ -407,8 +428,11 @@ WifiFetchSnapshot fetch_once(const WifiCredentials& credentials) {
       vTaskDelay(pdMS_TO_TICKS(100));
     }
     if (!joined) break;
+    result.error = "Couldn't reach photo service";
+    const std::string url = photo_network < 0 ? std::string("https://workos.com/init")
+      : "https://avatar.chan.dev/v1/" + std::string(kPhotoNetworks[photo_network]) + "/" + handle;
     esp_http_client_config_t http = {};
-    http.url = "https://workos.com/init";
+    http.url = url.c_str();
     http.crt_bundle_attach = esp_crt_bundle_attach;
     http.timeout_ms = 7000;
     http.disable_auto_redirect = true;
@@ -418,10 +442,29 @@ WifiFetchSnapshot fetch_once(const WifiCredentials& credentials) {
     if (esp_http_client_open(client, 0) == ESP_OK) {
       esp_http_client_fetch_headers(client);
       result.http_status = esp_http_client_get_status_code(client);
-      uint8_t data[1024];
-      int bytes = esp_http_client_read(client, reinterpret_cast<char*>(data), sizeof(data));
-      if (bytes > 0) result.bytes = bytes;
-      if (result.http_status == 200 && result.bytes > 0) result.state = WifiFetchState::Succeeded;
+      if (photo_network < 0) {
+        uint8_t data[1024];
+        int bytes = esp_http_client_read(client, reinterpret_cast<char*>(data), sizeof(data));
+        if (bytes > 0) result.bytes = bytes;
+        if (result.http_status == 200 && result.bytes > 0) result.state = WifiFetchState::Succeeded;
+      } else if (result.http_status == 200) {
+        body.clear();
+        uint8_t data[2048];
+        bool complete = false;
+        for (;;) {
+          int bytes = esp_http_client_read(client, reinterpret_cast<char*>(data), sizeof(data));
+          if (bytes < 0) break;
+          if (bytes == 0) { complete = esp_http_client_is_complete_data_received(client); break; }
+          if (body.size() + size_t(bytes) > kPhotoMaxBytes) { body.clear(); break; }
+          body.insert(body.end(), data, data + bytes);
+        }
+        result.bytes = body.size();
+        if (complete && !body.empty()) { result.state = WifiFetchState::Succeeded; result.error.clear(); }
+        else { body.clear(); result.error = "Couldn't download photo"; }
+      } else {
+        result.error = result.http_status == 404 ? "No public photo found"
+          : result.http_status == 429 ? "Photo service busy, try later" : "Photo service unavailable";
+      }
     }
     esp_http_client_cleanup(client);
   } while (false);
@@ -515,11 +558,20 @@ esp_err_t handle_post(httpd_req_t* req) {
   if (!profile_form(json.get(), profile_snapshot().profile, candidate, error)) return message(req, 400, error);
   auto value = [&](const char* key) { return cJSON_GetObjectItemCaseSensitive(json.get(), key)->valuestring; };
   std::string action = value("image"); bool replace = false; const uint8_t* jpeg = nullptr; size_t jpeg_size = 0;
-  if (action == "remove") replace = true;
+  int source = -1;
+  for (int i = 0; i < 3; ++i) if (action == kPhotoNetworks[i]) source = i;
+  static const char* names[3] = {"GitHub", "X", "LinkedIn"};
+  if (source >= 0) {
+    if (candidate.urls[source].empty()) return message(req, 400, std::string("Add your ") + names[source] + " handle to use its photo.");
+  } else if (action == "remove") replace = true;
   else if (action == "staged") { if (staged_image.empty() || staged_token != value("imageToken")) return message(req, 400, "Upload your photo again before saving."); replace = true; jpeg = staged_image.data(); jpeg_size = staged_image.size(); }
   else if (action != "keep") return message(req, 400, "Invalid photo choice.");
   if (!save_record(candidate, jpeg, jpeg_size, replace, error)) return message(req, 500, error);
-  auto result = message(req, 200, "Saved on your badge. You may close this page; setup Wi-Fi will turn off.");
+  // The current photo stays until the new one downloads after setup closes.
+  const bool queued = source >= 0 && photo_fetch_request(source);
+  auto result = message(req, 200, source < 0 ? "Saved on your badge. You may close this page; setup Wi-Fi will turn off."
+    : queued ? std::string("Saved. When setup closes, the badge joins the event Wi-Fi, gets your ") + names[source] + " photo, then turns Wi-Fi off."
+    : "Saved, but the photo download could not be queued. Open setup again to retry.");
   staged_image.clear(); staged_token.clear(); finish_session(PortalOutcome::Saved); return result;
 }
 bool start_network() {
@@ -568,20 +620,37 @@ void dns_tick() {
 void service_loop(void*) {
   for (;;) {
     process_profile_reset();
-    bool fetch = false;
+    bool fetch = false, from_profile = false;
+    int photo_network = -1;
+    std::string photo_handle;
     WifiCredentials credentials;
     {
       std::lock_guard<std::mutex> lock(portal_mutex);
       if (fetch_state.state == WifiFetchState::Pending && !requested && !running) {
         fetch_state.state = WifiFetchState::Running;
         credentials = std::move(fetch_credentials);
+        photo_network = fetch_photo_network; photo_handle = std::move(fetch_photo_handle);
+        from_profile = fetch_photo_from_profile;
+        fetch_photo_network = -1; fetch_photo_handle.clear();
         fetch = true;
       }
     }
     if (fetch) {
-      auto result = fetch_once(credentials);
+      std::vector<uint8_t> body;
+      auto result = fetch_once(credentials, photo_network, photo_handle, body);
       std::fill(credentials.password.begin(), credentials.password.end(), '\0');
       credentials = {};
+      // Wi-Fi is already off. Replace only the photo, and only for the account
+      // that was requested if it came from the saved profile.
+      if (photo_network >= 0 && result.state == WifiFetchState::Succeeded) {
+        auto current = profile_snapshot();
+        std::string error;
+        if (from_profile && social_handle(photo_network, current.profile.urls[photo_network]) != photo_handle) {
+          result.state = WifiFetchState::Failed; result.error = "Profile changed, photo skipped";
+        } else if (!save_record(current.profile, body.data(), body.size(), true, error)) {
+          result.state = WifiFetchState::Failed; result.error = "Couldn't use that photo";
+        }
+      }
       std::lock_guard<std::mutex> lock(portal_mutex);
       fetch_state = result;
     }
@@ -629,7 +698,34 @@ bool wifi_fetch_request(const WifiCredentials* temporary) {
     credentials = *temporary;
   } else if (!wifi_credentials_load(credentials)) return false;
   fetch_credentials = std::move(credentials);
-  fetch_state = {WifiFetchState::Pending, 0, 0};
+  fetch_photo_network = -1; fetch_photo_handle.clear(); fetch_photo_from_profile = false;
+  fetch_state = {WifiFetchState::Pending, 0, 0, -1, {}};
+  return true;
+}
+bool photo_fetch_request(int network, const WifiCredentials* temporary, const std::string* handle) {
+  if (network < 0 || network > 2) return false;
+  std::string target;
+  const bool from_profile = !handle;
+  if (handle) {
+    std::string url;
+    if (!social_url(network, *handle, url) || url.empty()) return false;
+    target = social_handle(network, url);
+  } else {
+    target = social_handle(network, profile_snapshot().profile.urls[network]);
+  }
+  if (target.empty()) return false;
+  WifiCredentials credentials;
+  if (temporary) {
+    if (!wifi_credentials_valid(*temporary)) return false;
+    credentials = *temporary;
+  } else if (!wifi_credentials_load(credentials)) return false;
+  std::lock_guard<std::mutex> lock(portal_mutex);
+  // Unlike the probe this may be queued from an open setup page; the service
+  // loop starts it only after the setup AP has fully stopped.
+  if (reset_pending() || fetch_state.state == WifiFetchState::Pending || fetch_state.state == WifiFetchState::Running) return false;
+  fetch_credentials = std::move(credentials);
+  fetch_photo_network = network; fetch_photo_handle = std::move(target); fetch_photo_from_profile = from_profile;
+  fetch_state = {WifiFetchState::Pending, 0, 0, network, {}};
   return true;
 }
 bool profile_reset_request(std::string& error) { return queue_profile_reset(error); }

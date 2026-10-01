@@ -42,5 +42,6 @@ assert script, "Native portal asset must contain its local browser script"
 run("node", "--check", OUT / "portal.js")
 run("node", ROOT / "tests/conference-profile-host/browser-clock.cjs", OUT / "portal.js")
 run("node", HERE / "browser-profile.cjs", OUT / "portal.js")
+run("node", HERE / "browser-photo-source.cjs", OUT / "portal.js")
 run("node", HERE / "browser-wifi.cjs", OUT / "portal.js")
 run("node", HERE / "browser-photo.cjs", OUT / "portal.js")

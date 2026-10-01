@@ -52,6 +52,13 @@ The public-profile cache excludes email, Wi-Fi credentials, access/refresh token
 
 ## Wi-Fi setup and network requests
 
+**Profile photo download.** If the attendee chooses "Use my GitHub / X / LinkedIn
+photo" during phone setup, the badge later sends that one handle (and the
+network name) to `avatar.chan.dev`, which looks it up through unavatar.io and
+returns a 160×160 JPEG. No account, token or other profile field is sent. The
+relay caches photos for 7 days and does not log handles. The downloaded photo is
+stored on the badge like an uploaded one and is cleared by Reset badge.
+
 Wi-Fi setup creates a temporary hotspot protected by a newly generated password shown in its QR code. The local portal uses HTTP at `192.168.4.1` over that hotspot. It accepts setup requests from the hotspot interface, checks a per-session nonce, and saves credentials only after joining the selected network. The hotspot closes after success, when leaving setup, or after ten minutes.
 
 WorkOS, backend, and avatar traffic use certificate-validated HTTPS. The firmware sends the WorkOS bearer token only to the exact configured profile/workspace endpoints. Avatar requests use restricted provider CDN URLs, omit the bearer token, and do not follow redirects. Downloads and decoding have size limits.
