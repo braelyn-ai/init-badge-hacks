@@ -67,7 +67,7 @@ function png(){
       },Array.from(written[0].body));
       assert.deepEqual([decoded.width,decoded.height],[512,512]);
       assert(decoded.pixel[0]<5&&decoded.pixel[1]>250&&decoded.pixel[2]<5,'Encoded square excludes the outer colored strips');
-      assert.deepEqual(written[1].parsed,{name:'Synthetic Attendee',company:'Synthetic Lab',github:'',x:'',linkedin:'',ssid:'init() attendee',password:'',image:'staged',imageToken:'0123456789abcdef'});
+      assert.deepEqual(written[1].parsed,{name:'Synthetic Attendee',company:'Synthetic Lab',network:'github',handle:'',ssid:'init() attendee',password:'',image:'staged',imageToken:'0123456789abcdef'});
       assert.deepEqual(errors,[]);await context.close();
     }
     {

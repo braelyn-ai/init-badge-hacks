@@ -20,7 +20,10 @@ struct UiModel {
     std::string calibration_title, calibration_message;
     std::string name;
     std::string company;
-    std::array<std::string, 3> socials;
+    // The one social account: badge_social::Networks index (-1 none) and its
+    // profile URL, which the Badge QR opens.
+    int social_network = -1;
+    std::string social_url;
     std::string clock_text = "--:--";
     std::string date_text = "Date / time not set";
     const uint16_t* avatar = nullptr;
@@ -32,7 +35,6 @@ struct UiModel {
     int battery_percent = -1;
     int brightness_percent = 60;
     Orientation orientation = Orientation::Default;
-    int selected_network = 0;
     bool settings_pending = false;
     std::string photo_status; // Footer text while a photo downloads and briefly after.
     bool clock_valid = false;
@@ -50,7 +52,6 @@ struct UiCallbacks {
     std::function<void()> close_setup;
     std::function<void(int)> brightness; // Absolute percentage, 10 through 100.
     std::function<void(Orientation)> orientation;
-    std::function<void(int)> network;
     std::function<void(int)> bookmark; // Toggle this agenda item.
     std::function<void()> reset_badge; // Only after a fresh confirmation tap.
     std::function<void()> unlock_after_dark; // Complete touch-entered Morse word.

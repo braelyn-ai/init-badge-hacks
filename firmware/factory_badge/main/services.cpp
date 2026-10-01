@@ -1,6 +1,7 @@
 #include "services.h"
 #include "portal_page.h"
 #include "wifi_config.h"
+#include "social_networks.h"
 #include "../../devices_badge/avatar_decode.h"
 #include <algorithm>
 #include <atomic>
@@ -85,43 +86,10 @@ bool name_valid(const std::string& input, std::string& result) {
   }
   result = s; return true;
 }
-bool social_url(unsigned network, const std::string& input, std::string& result) {
-  result.clear(); if (network > 2 || input.size() > 180) return false;
-  auto value = trim(input); if (value.empty()) return true;
-  auto handle = value;
-  static const char* prefixes[3][4] = {
-    {"https://github.com/", "https://www.github.com/", nullptr, nullptr},
-    {"https://x.com/", "https://twitter.com/", "https://www.x.com/", "https://www.twitter.com/"},
-    {"https://www.linkedin.com/in/", "https://linkedin.com/in/", nullptr, nullptr}
-  };
-  bool full = false;
-  for (auto prefix : prefixes[network]) if (prefix && value.rfind(prefix, 0) == 0) { handle = value.substr(strlen(prefix)); full = true; break; }
-  if (full && !handle.empty() && handle.back() == '/') handle.pop_back();
-  if (!full && !handle.empty() && handle.front() == '@') handle.erase(0, 1);
-  if (handle.empty() || handle.size() > (network == 0 ? 39u : network == 1 ? 15u : 100u)) return false;
-  for (size_t i = 0; i < handle.size(); ++i) {
-    char c = handle[i];
-    if (!alnum(c) && !(c == '_' && network != 0) && !(c == '-' && network != 1)) return false;
-    if (network == 0 && c == '-' && (i == 0 || i + 1 == handle.size() || handle[i - 1] == '-')) return false;
-  }
-  result = std::string(network == 0 ? "https://github.com/" : network == 1 ? "https://x.com/" : "https://www.linkedin.com/in/") + handle + (network == 2 ? "/" : "");
-  return true;
-}
-// Network keys shared by the setup page, photo relay paths and profile slots.
-constexpr const char* kPhotoNetworks[3] = {"github", "x", "linkedin"};
-// Canonical profile URL (from social_url) back to its bare handle.
-std::string social_handle(unsigned network, const std::string& url) {
-  static const char* prefixes[3] = {"https://github.com/", "https://x.com/", "https://www.linkedin.com/in/"};
-  if (network > 2 || url.rfind(prefixes[network], 0) != 0) return {};
-  auto handle = url.substr(strlen(prefixes[network]));
-  if (!handle.empty() && handle.back() == '/') handle.pop_back();
-  return handle;
-}
 bool profile_valid(const Profile& p) {
   std::string value; if (!name_valid(p.name, value) || value != p.name) return false;
   if (!name_valid(p.company, value) || value != p.company) return false;
-  for (unsigned i = 0; i < 3; ++i) if (!social_url(i, p.urls[i], value) || value != p.urls[i]) return false;
-  return true;
+  return p.network < 0 ? p.handle.empty() : badge_social::valid(p.network, p.handle);
 }
 uint16_t u16(const uint8_t* p) { return p[0] | uint16_t(p[1]) << 8; }
 uint32_t u32(const uint8_t* p) { return p[0] | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24; }
@@ -141,27 +109,55 @@ bool digest(const uint8_t* header, const uint8_t* metadata, size_t length, const
   if (ok) ok = mbedtls_sha256_finish(&hash, output) == 0;
   mbedtls_sha256_free(&hash); return ok;
 }
-size_t encode(const Profile& p, uint8_t* bytes, uint16_t version) {
-  if (version != 1 && version != 2) return 0;
-  if (version == 1 && !p.company.empty()) return 0;
-  const std::string* fields[] = {&p.name, &p.urls[0], &p.urls[1], &p.urls[2], &p.company}; size_t used = 0;
-  for (unsigned i = 0; i < (version == 1 ? 4u : 5u); ++i) { auto field = fields[i];
+// Version 3 stores one account: name, network key, handle, company. Versions
+// 1 and 2 (three fixed GitHub/X/LinkedIn URL slots, company from 2) are still
+// read; the first filled slot becomes the account.
+constexpr uint16_t kRecordVersion = 3;
+size_t put_fields(const std::string* const* fields, unsigned count, uint8_t* bytes) {
+  size_t used = 0;
+  for (unsigned i = 0; i < count; ++i) { auto field = fields[i];
     if (used + 2 + field->size() > kMetadata) return 0;
     put16(bytes + used, field->size()); used += 2;
     memcpy(bytes + used, field->data(), field->size()); used += field->size();
   }
   return used;
 }
-bool decode(const uint8_t* bytes, size_t length, uint16_t version, Profile& p) {
-  if ((version != 1 && version != 2) || length > kMetadata) return false;
-  Profile candidate;
-  std::string* fields[] = {&candidate.name, &candidate.urls[0], &candidate.urls[1], &candidate.urls[2], &candidate.company}; size_t used = 0;
-  for (unsigned i = 0; i < (version == 1 ? 4u : 5u); ++i) { auto field = fields[i];
+bool get_fields(const uint8_t* bytes, size_t length, std::string* const* fields, unsigned count) {
+  size_t used = 0;
+  for (unsigned i = 0; i < count; ++i) { auto field = fields[i];
     if (used + 2 > length) return false;
     size_t n = u16(bytes + used); used += 2;
     if (n > length - used || memchr(bytes + used, 0, n)) return false;
     field->assign(reinterpret_cast<const char*>(bytes + used), n); used += n; }
-  if (used != length || !profile_valid(candidate)) return false;
+  return used == length;
+}
+size_t encode(const Profile& p, uint8_t* bytes, uint16_t version) {
+  if (version != kRecordVersion || !profile_valid(p)) return 0;
+  const std::string key = p.network < 0 ? std::string() : badge_social::Networks[p.network].key;
+  const std::string* fields[] = {&p.name, &key, &p.handle, &p.company};
+  return put_fields(fields, 4, bytes);
+}
+bool decode(const uint8_t* bytes, size_t length, uint16_t version, Profile& p) {
+  if (version < 1 || version > kRecordVersion || length > kMetadata) return false;
+  Profile candidate;
+  if (version == kRecordVersion) {
+    std::string key;
+    std::string* fields[] = {&candidate.name, &key, &candidate.handle, &candidate.company};
+    if (!get_fields(bytes, length, fields, 4)) return false;
+    candidate.network = key.empty() ? -1 : badge_social::find(key);
+    if (!key.empty() && candidate.network < 0) return false;
+  } else {
+    std::string urls[3];
+    std::string* fields[] = {&candidate.name, &urls[0], &urls[1], &urls[2], &candidate.company};
+    if (!get_fields(bytes, length, fields, version == 1 ? 4 : 5)) return false;
+    for (int i = 0; i < 3; ++i) {
+      if (urls[i].empty()) continue;
+      auto handle = badge_social::handle(i, urls[i]);
+      if (handle.empty()) return false;
+      if (candidate.network < 0) { candidate.network = i; candidate.handle = handle; }
+    }
+  }
+  if (!profile_valid(candidate)) return false;
   p = std::move(candidate); return true;
 }
 bool read_record(const char* path, ProfileSnapshot& result, uint8_t* digest_out = nullptr) {
@@ -170,7 +166,7 @@ bool read_record(const char* path, ProfileSnapshot& result, uint8_t* digest_out 
   if (fstat(fileno(file.value), &info) || !S_ISREG(info.st_mode) || info.st_size < int64_t(kHeader) ||
       info.st_size > int64_t(kHeader + kMetadata + kAvatarBytes) || fread(header, 1, kHeader, file.value) != kHeader) return false;
   size_t meta_size = u32(header + 16), image_size = u32(header + 20); uint16_t version = u16(header + 8);
-  if (memcmp(header, kMagic, 8) || (version != 1 && version != 2) || u16(header + 10) != kHeader || u16(header + 12) != kAvatarSide ||
+  if (memcmp(header, kMagic, 8) || version < 1 || version > kRecordVersion || u16(header + 10) != kHeader || u16(header + 12) != kAvatarSide ||
       u16(header + 14) != kAvatarSide || !meta_size || meta_size > kMetadata || (image_size && image_size != kAvatarBytes) ||
       u32(header + 24) || u32(header + 28) || uint64_t(info.st_size) != kHeader + meta_size + image_size) return false;
   Profile profile;
@@ -199,9 +195,8 @@ bool save_record(const Profile& profile, const uint8_t* jpeg, size_t jpeg_size, 
     }
     badgeFreeAvatarPixels(rgb); next.avatar = std::move(pixels);
   }
-  // Keep empty-company records readable by the previous firmware. Version 2
-  // appends one bounded field; the path, pixels, hash and atomic commit stay the same.
-  const uint16_t version = profile.company.empty() ? 1 : 2;
+  // The path, pixels, hash and atomic commit are unchanged from versions 1-2.
+  const uint16_t version = kRecordVersion;
   uint8_t header[kHeader] = {}, metadata[kMetadata]; size_t length = encode(profile, metadata, version);
   if (!length) { error = "Badge too large"; return false; }
   memcpy(header, kMagic, 8); put16(header + 8, version); put16(header + 10, kHeader); put16(header + 12, kAvatarSide); put16(header + 14, kAvatarSide);
@@ -273,17 +268,14 @@ void replace_token(std::string& s, const char* token, const std::string& value) 
 std::string page() {
   auto current = profile_snapshot(); std::string html = BADGE_PORTAL_HTML;
   WifiCredentials wifi; wifi_credentials_load(wifi); const bool custom = wifi_credentials_custom();
-  // One social account: the first saved network and its bare handle.
-  int network = 0;
-  while (network < 2 && current.profile.urls[network].empty()) ++network;
-  if (current.profile.urls[network].empty()) network = 0;
+  const int network = current.profile.network < 0 ? 0 : current.profile.network;
   // Replace tokens in reverse document order so attendee text inserted earlier
   // in the page can never be matched as a later token.
   replace_token(html, "{{NONCE}}", session_nonce);
   replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
   replace_token(html, "{{PHOTO_CHOICE}}", current.avatar ? "keep" : "network");
-  replace_token(html, "{{HANDLE}}", escape(social_handle(network, current.profile.urls[network])));
-  replace_token(html, "{{NETWORK}}", kPhotoNetworks[network]);
+  replace_token(html, "{{HANDLE}}", escape(current.profile.handle));
+  replace_token(html, "{{NETWORK}}", badge_social::Networks[network].key);
   replace_token(html, "{{COMPANY}}", escape(current.profile.company));
   replace_token(html, "{{NAME}}", escape(current.profile.name));
   replace_token(html, "{{WIFI_STATUS}}", custom ? "This badge has a different network saved." : "Using the built-in event Wi-Fi.");
@@ -320,8 +312,8 @@ bool json_fields(cJSON* root, const std::vector<const char*>& allowed) {
   return true;
 }
 bool profile_form(cJSON* root, const Profile& previous, Profile& candidate, std::string& error) {
-  const char* fields[] = {"name", "github", "x", "linkedin", "image", "imageToken"};
-  if (!json_fields(root, {fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], "company", "ssid", "password"})) {
+  const char* fields[] = {"name", "network", "handle", "image", "imageToken"};
+  if (!json_fields(root, {fields[0], fields[1], fields[2], fields[3], fields[4], "company", "ssid", "password"})) {
     error = "Unexpected form field."; return false;
   }
   for (auto field : fields) if (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(root, field))) {
@@ -337,8 +329,15 @@ bool profile_form(cJSON* root, const Profile& previous, Profile& candidate, std:
   if (company && (!cJSON_IsString(company) || !name_valid(company->valuestring, next.company))) {
     error = "Use a company of at most 60 characters / 120 UTF-8 bytes, without control characters."; return false;
   }
-  for (unsigned i = 0; i < 3; ++i) if (!social_url(i, cJSON_GetObjectItemCaseSensitive(root, fields[i + 1])->valuestring, next.urls[i])) {
-    error = "Check the social handles. Use a profile handle or its HTTPS profile URL."; return false;
+  const std::string handle = cJSON_GetObjectItemCaseSensitive(root, "handle")->valuestring;
+  const int network = badge_social::find(cJSON_GetObjectItemCaseSensitive(root, "network")->valuestring);
+  if (handle.find_first_not_of(' ') != std::string::npos) {
+    if (network < 0) { error = "Choose a social network."; return false; }
+    next.handle = badge_social::handle(network, handle);
+    if (next.handle.empty()) {
+      error = std::string("Check your ") + badge_social::Networks[network].label + " username or profile link."; return false;
+    }
+    next.network = network;
   }
   candidate = std::move(next); return true;
 }
@@ -409,7 +408,7 @@ WifiFetchSnapshot fetch_once(const WifiCredentials& credentials, int photo_netwo
     if (!joined) break;
     result.error = "Couldn't reach photo service";
     const std::string url = photo_network < 0 ? std::string("https://workos.com/init")
-      : "https://avatar.chan.dev/v1/" + std::string(kPhotoNetworks[photo_network]) + "/" + handle;
+      : "https://avatar.chan.dev/v1/" + std::string(badge_social::Networks[photo_network].key) + "/" + handle;
     esp_http_client_config_t http = {};
     http.url = url.c_str();
     http.crt_bundle_attach = esp_crt_bundle_attach;
@@ -528,25 +527,23 @@ esp_err_t handle_post(httpd_req_t* req) {
     }
   }
   std::string action = value("image"); bool replace = false; const uint8_t* jpeg = nullptr; size_t jpeg_size = 0;
+  // "network" downloads the account's photo after setup; "auto" does so only
+  // when there is no saved photo yet.
   int source = -1;
-  for (int i = 0; i < 3; ++i) if (action == kPhotoNetworks[i]) source = i;
-  if (action == "auto") {
-    // Automatic: without a saved photo, use the first handle (GitHub, X, LinkedIn).
-    action = "keep";
-    if (!profile_snapshot().avatar) for (int i = 0; i < 3 && source < 0; ++i) if (!candidate.urls[i].empty()) source = i;
+  if (action == "auto") { action = "keep"; if (!profile_snapshot().avatar) source = candidate.network; }
+  else if (action == "network") {
+    if (candidate.network < 0) return message(req, 400, "Add your username to use its photo.");
+    source = candidate.network;
   }
-  static const char* names[3] = {"GitHub", "X", "LinkedIn"};
-  if (source >= 0) {
-    if (candidate.urls[source].empty()) return message(req, 400, std::string("Add your ") + names[source] + " handle to use its photo.");
-  } else if (action == "remove") replace = true;
-  else if (action == "staged") { if (staged_image.empty() || staged_token != value("imageToken")) return message(req, 400, "Upload your photo again before saving."); replace = true; jpeg = staged_image.data(); jpeg_size = staged_image.size(); }
-  else if (action != "keep") return message(req, 400, "Invalid photo choice.");
+  if (source < 0 && action == "remove") replace = true;
+  else if (source < 0 && action == "staged") { if (staged_image.empty() || staged_token != value("imageToken")) return message(req, 400, "Upload your photo again before saving."); replace = true; jpeg = staged_image.data(); jpeg_size = staged_image.size(); }
+  else if (source < 0 && action != "keep") return message(req, 400, "Invalid photo choice.");
   if (wifi_changed && !wifi_credentials_save(wifi)) return message(req, 500, "Could not save Wi-Fi. Try again.");
   if (!save_record(candidate, jpeg, jpeg_size, replace, error)) return message(req, 500, error);
   // The current photo stays until the new one downloads after setup closes.
   const bool queued = source >= 0 && photo_fetch_request(source);
   auto result = message(req, 200, source < 0 ? "Saved on your badge. You may close this page; setup Wi-Fi will turn off."
-    : queued ? "Saved. When setup closes, the badge joins " + wifi.ssid + ", gets your " + names[source] + " photo, then turns Wi-Fi off."
+    : queued ? "Saved. When setup closes, the badge joins " + wifi.ssid + ", gets your " + badge_social::Networks[source].label + " photo, then turns Wi-Fi off."
     : "Saved, but the photo download could not be queued. Open setup again to retry.");
   staged_image.clear(); staged_token.clear(); finish_session(PortalOutcome::Saved); return result;
 }
@@ -621,7 +618,7 @@ void service_loop(void*) {
       if (photo_network >= 0 && result.state == WifiFetchState::Succeeded) {
         auto current = profile_snapshot();
         std::string error;
-        if (from_profile && social_handle(photo_network, current.profile.urls[photo_network]) != photo_handle) {
+        if (from_profile && (current.profile.network != photo_network || current.profile.handle != photo_handle)) {
           result.state = WifiFetchState::Failed; result.error = "Profile changed, photo skipped";
         } else if (!save_record(current.profile, body.data(), body.size(), true, error)) {
           result.state = WifiFetchState::Failed; result.error = "Couldn't use that photo";
@@ -679,15 +676,13 @@ bool wifi_fetch_request(const WifiCredentials* temporary) {
   return true;
 }
 bool photo_fetch_request(int network, const WifiCredentials* temporary, const std::string* handle) {
-  if (network < 0 || network > 2) return false;
+  if (network < 0 || network >= badge_social::Count) return false;
   std::string target;
   const bool from_profile = !handle;
-  if (handle) {
-    std::string url;
-    if (!social_url(network, *handle, url) || url.empty()) return false;
-    target = social_handle(network, url);
-  } else {
-    target = social_handle(network, profile_snapshot().profile.urls[network]);
+  if (handle) target = badge_social::handle(network, *handle);
+  else {
+    const auto profile = profile_snapshot().profile;
+    if (profile.network == network) target = profile.handle;
   }
   if (target.empty()) return false;
   WifiCredentials credentials;

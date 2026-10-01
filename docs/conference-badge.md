@@ -840,3 +840,19 @@ hidden title's space, so the photo starts at the shared content top (y=100) and
 nothing shifts between pages. The photo is 208px with 16px rounded corners (like
 the After Dark artwork); the QR uses the same rounded square, and its gray
 network name occupies the title position.
+
+### October 1 one social account, ten networks
+
+A badge now holds exactly one social account. `main/social_networks.h` is the
+single table of networks (GitHub, X, LinkedIn, Bluesky, Hugging Face, YouTube,
+GitLab, Substack, Dribbble, Threads): key (also the relay path), label, profile
+URL pattern, accepted pasted-URL prefixes and handle rule. The QR URL is built
+at display time, so LinkedIn now uses the shorter `https://linkedin.com/in/<handle>`
+(no `www.`, no trailing slash) for every badge. Profile record v3 stores name,
+network key, handle and company; v1/v2 records (three fixed URL slots) are still
+read and their first filled slot becomes the account, and are rewritten as v3 on
+the next save. Older firmware cannot read v3. The Badge page is a single card;
+the per-network card scroll and its `network` NVS preference are retired (the
+key is left dormant and reset no longer writes it). USB status reports
+`social_network` (key) and a one-bit `configured_mask`. Host checks cover every
+network's parsing and URL, migration, the setup list and the relay table.

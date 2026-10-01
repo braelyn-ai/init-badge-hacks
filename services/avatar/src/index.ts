@@ -52,7 +52,7 @@ export default {
     if (request.method !== 'GET' || url.search) return json(404, 'not_found', 'Not found.');
     if (url.pathname === '/health') return json(200, 'none', 'ready');
     const target = parse(url.pathname);
-    if (!target) return json(404, 'not_found', 'Use /v1/github|x|linkedin/<handle>.');
+    if (!target) return json(404, 'not_found', 'Use /v1/<network>/<handle> for a supported network.');
 
     const key = new Request(`https://avatar.chan.dev/v1/${target.network}/${target.handle}`);
     const cached = await caches.default.match(key);

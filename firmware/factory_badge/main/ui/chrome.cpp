@@ -48,8 +48,7 @@ void Chrome::reflow() { lv_obj_center(root_); lv_obj_center(status_root_); }
 void Chrome::update() {
     const auto& model = context_.model;
     const bool profile_filled = context_.page == 3 &&
-        (!model.name.empty() || !model.company.empty() || model.avatar ||
-         std::any_of(model.socials.begin(), model.socials.end(), [](const auto& url) { return !url.empty(); }));
+        (!model.name.empty() || !model.company.empty() || model.avatar || !model.social_url.empty());
     // A configured Badge keeps the brand mark and arrows but drops the dots.
     set_hidden(root_, context_.setup || context_.touch_test || context_.reset);
     set_hidden(brand_, context_.page == 0);

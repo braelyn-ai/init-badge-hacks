@@ -4,7 +4,7 @@ Temporary (October 2026) relay that gives the conference badge a profile photo
 with one unauthenticated request:
 
 ```
-GET https://avatar.chan.dev/v1/<github|x|linkedin>/<handle>  ->  160x160 image/jpeg
+GET https://avatar.chan.dev/v1/<network>/<handle>  ->  160x160 image/jpeg
 ```
 
 The Worker (`chan-avatar`) calls [unavatar.io](https://unavatar.io) with the
@@ -17,14 +17,17 @@ Delete the Worker and the `avatar.chan.dev` custom domain when the event ends.
 
 ## Limits
 
-- Only `github`, `x` and `linkedin`, with handles matching each network's format;
-  no caller-supplied URLs or query strings.
+- Only the badge's ten networks (`github`, `x`, `linkedin`, `bluesky`,
+  `huggingface`, `youtube`, `gitlab`, `substack`, `dribbble`, `threads`), with
+  handles matching each network's format; no caller-supplied URLs or query
+  strings. A test keeps `src/route.ts` in step with the firmware's
+  `social_networks.h`.
 - Sources over 2 MiB and outputs over 64 KiB are refused (badge maximum: 128 KiB).
 - Uncached lookups share one rate limit (30/minute) because attendees share the
   venue's public IP. Cached hits are unlimited.
 - Invocation logs are off; errors log the network and status, never the handle.
-- X and LinkedIn photos come from unavatar's unofficial sources and may stop
-  working; the badge falls back to manual upload.
+- X, LinkedIn and Threads photos come from unavatar's unofficial sources and may
+  stop working; the badge falls back to manual upload.
 
 ## Commands
 

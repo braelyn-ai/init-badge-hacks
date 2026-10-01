@@ -1,7 +1,8 @@
 // Offline checks: unavatar, Cloudflare Images and the edge cache are fakes.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker, { type Env } from '../src/index';
-import { parse } from '../src/route';
+import { readFileSync } from 'node:fs';
+import { HANDLES, parse } from '../src/route';
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]);
 const store = new Map<string, Response>();
@@ -40,11 +41,28 @@ describe('parse', () => {
     expect(parse('/v1/linkedin/michael-chan-1234')).toEqual({ network: 'linkedin', handle: 'michael-chan-1234' });
   });
   it('rejects other networks, paths and malformed handles', () => {
-    for (const path of ['/v1/instagram/a', '/v1/github/a/b', '/v1/github/-bad', '/v1/github/a--b',
-      '/v1/x/way_too_long_handle', '/v1/linkedin/ab', '/v1/github/%2e%2e', '/v1/github/%E0%A4%A', '/v2/github/a',
+    for (const path of ['/v1/instagram/a', '/v1/myspace/tom', '/v1/github/a/b', '/v1/github/-bad', '/v1/github/a--b',
+      '/v1/x/way_too_long_handle', '/v1/github/%2e%2e', '/v1/github/%E0%A4%A', '/v2/github/a',
       '/v1/github/https%3A%2F%2Fevil.example']) {
       expect(parse(path), path).toBeNull();
     }
+  });
+});
+
+describe('networks', () => {
+  it('match the badge firmware table exactly', () => {
+    const header = readFileSync(new URL('../../../firmware/factory_badge/main/social_networks.h', import.meta.url), 'utf8');
+    const keys = [...header.matchAll(/\{"([a-z]+)", "[^"]+", "https:\/\//g)].map(m => m[1]);
+    expect(keys).toHaveLength(10);
+    expect(Object.keys(HANDLES)).toEqual(keys);
+  });
+  it('accept each network\'s badge-normalized handles', () => {
+    const ok: [string, string][] = [['bluesky', 'chan.dev'], ['bluesky', 'chantastic.bsky.social'], ['huggingface', 'julien-c'],
+      ['youtube', 'GitHub'], ['gitlab', 'sytses'], ['substack', 'bankless'], ['dribbble', 'omidnikrah'], ['threads', 'zuck'],
+      ['linkedin', 'michael-chan-1234'], ['linkedin', 'some_one']];
+    for (const [network, handle] of ok) expect(parse(`/v1/${network}/${handle}`), `${network}/${handle}`).not.toBeNull();
+    for (const path of ['/v1/bluesky/nodot', '/v1/bluesky/bad..dev', '/v1/substack/a.b', '/v1/youtube/ab', '/v1/threads/bad-name', '/v1/dribbble/x'])
+      expect(parse(path), path).toBeNull();
   });
 });
 

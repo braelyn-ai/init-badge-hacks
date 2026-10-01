@@ -111,7 +111,7 @@ const saves=h=>h.requests.filter(r=>r.path==='/save');
     await h.save();
     assert.equal(uploads(h).length,1);assert.equal(uploads(h)[0].body.type,'image/jpeg');
     assert.equal(uploads(h)[0].headers['X-Conference-Nonce'],'0123456789abcdef0123456789abcdef');
-    assert.deepEqual(saves(h)[0].parsed,{name:'Synthetic Attendee',company:'Research',github:'',x:'',linkedin:'',ssid:'init() attendee',password:'',image:'staged',imageToken:'0123456789abcdef'});
+    assert.deepEqual(saves(h)[0].parsed,{name:'Synthetic Attendee',company:'Research',network:'github',handle:'',ssid:'init() attendee',password:'',image:'staged',imageToken:'0123456789abcdef'});
     assert.equal(h.element('form').hidden,true);assert.equal(h.timers.size,0);
   }
   for(const mode of [{blobUnsupported:true},{throwObjectUrl:true}]){

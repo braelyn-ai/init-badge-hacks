@@ -16,6 +16,7 @@
 #include <Arduino.h>
 #include "@@ROOT@@/firmware/factory_badge/main/services.h"
 #include "@@ROOT@@/firmware/factory_badge/main/wifi_config.h"
+#include "@@ROOT@@/firmware/factory_badge/main/social_networks.h"
 #include "@@ROOT@@/firmware/factory_badge/main/portal_page.h"
 // Only the cJSON tree access boundary is adapted. The production form validator
 // below handles field names, duplicates, types and normalized values itself.

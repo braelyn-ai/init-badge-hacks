@@ -40,6 +40,13 @@ script = re.search(r"<script>(.*?)</script>", asset, re.S)
 assert script, "Native portal asset must contain its local browser script"
 (OUT / "portal.js").write_text(script[1].replace("{{NONCE}}", "0123456789abcdef0123456789abcdef"))
 run("node", "--check", OUT / "portal.js")
+# The setup page's network select and labels must match the firmware table.
+import re
+table = re.findall(r'\{"([a-z]+)", "([^"]+)", "https://', (ROOT / "firmware/factory_badge/main/social_networks.h").read_text())
+assert len(table) == 10, table
+options = re.findall(r'<option value="([a-z]+)">([^<]+)</option>', asset[asset.index('id="network"'):asset.index('id="handle"')])
+labels = dict(re.findall(r"([a-z]+):'([^']+)'", re.search(r"const networkNames=\{([^}]*)\}", asset).group(1)))
+assert options == table and labels == dict(table), (options, labels, table)
 run("node", ROOT / "tests/conference-profile-host/browser-clock.cjs", OUT / "portal.js")
 run("node", HERE / "browser-profile.cjs", OUT / "portal.js")
 run("node", HERE / "browser-photo-source.cjs", OUT / "portal.js")

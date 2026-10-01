@@ -52,8 +52,8 @@ The public-profile cache excludes email, Wi-Fi credentials, access/refresh token
 
 ## Wi-Fi setup and network requests
 
-**Profile photo download.** If the attendee chooses "Use my GitHub / X / LinkedIn
-photo" during phone setup, the badge later sends that one handle (and the
+**Profile photo download.** If the attendee chooses "From my social network" during
+phone setup, the badge later sends that one handle (and the
 network name) to `avatar.chan.dev`, which looks it up through unavatar.io and
 returns a 160×160 JPEG. No account, token or other profile field is sent. The
 relay caches photos for 7 days and does not log handles. The downloaded photo is

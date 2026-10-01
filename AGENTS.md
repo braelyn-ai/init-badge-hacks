@@ -55,9 +55,13 @@
   runtime-only NVS override. Never put personal or test Wi-Fi in source, firmware
   or Git. Saving a network never joins it; an explicit test or future fetch/refresh may join briefly and
   must disconnect when the action ends. Phone setup has one Save badge and three
-  selects: Wi-Fi (event or another network), one social network + username (its
-  QR and photo source; other slots are cleared), and Photo (from that network,
-  upload, keep, none). The network photo queues one unauthenticated GET of `avatar.chan.dev/v1/<network>/<handle>`
+  selects: Wi-Fi (event or another network), one social account (network +
+  username from `main/social_networks.h`: GitHub, X, LinkedIn, Bluesky, Hugging
+  Face, YouTube, GitLab, Substack, Dribbble, Threads; it is the QR and photo
+  source), and Photo (from that network, upload, keep, none). Profile records
+  are v3 (name, network key, handle, company); v1/v2 three-URL records are read
+  and their first filled slot becomes the account. The relay's route table must
+  match the firmware table (tested on both sides). The network photo queues one unauthenticated GET of `avatar.chan.dev/v1/<network>/<handle>`
   that starts only after the setup AP stops, replaces just the photo after Wi-Fi
   is off, and shows footer status. Never load authenticated identity caches
   into the manual conference model or require a cloud login.

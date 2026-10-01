@@ -278,7 +278,7 @@ int main(int argc, char** argv) {
         data->state = pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
     });
 
-    int brightness = 0, orientation = -1, network = -1, setup = 0;
+    int brightness = 0, orientation = -1, setup = 0;
     int bookmarked = -1, resets = 0, after_dark_unlocks = 0;
     int calibration_requests = 0;
     bool vibrating = false;
@@ -290,7 +290,6 @@ int main(int argc, char** argv) {
     callbacks.orientation = [&](badge::Orientation value) { orientation = int(value); };
     callbacks.bookmark = [&](int index) { bookmarked = index; };
     callbacks.reset_badge = [&] { ++resets; };
-    callbacks.network = [&](int value) { network = value; };
     callbacks.request_setup = [&] { ++setup; badge::ui_show_setup("init-test-badge", "example1234"); };
     callbacks.close_setup = [] { badge::ui_close_setup(false); };
     callbacks.unlock_after_dark = [&] {
@@ -1055,16 +1054,13 @@ int main(int argc, char** argv) {
 
     badge::ui_page(2);
     spin();
-    const int network_before = network;
     swipe(234, 338, 234, 160);
-    // A badge without an account shows one card, so a swipe cannot switch networks.
-    assert(network == network_before && badge::ui_page_index() == 3);
-    // Populate each social independently; the current card must remain selected.
+    // A badge holds one card, so a vertical swipe changes nothing.
+    assert(badge::ui_page_index() == 3);
     model.name = "Conference attendee";
     model.company = "WorkOS";
-    model.socials[0] = "https://github.com/octocat";
-    model.socials[1] = "https://x.com/example";
-    model.selected_network = 0;
+    model.social_network = 0;
+    model.social_url = "https://github.com/octocat";
     model.profile_revision = 1;
     std::vector<uint16_t> avatar(160 * 160, 0xf800);
     model.avatar = avatar.data();
@@ -1096,13 +1092,13 @@ int main(int argc, char** argv) {
     assert_chrome(false, true);
     assert_idle();
 
-    // Unconfigured networks have no card, even when selected programmatically.
-    model.selected_network = 2;
+    // Any table network labels its QR; switching networks rebuilds the card.
+    model.social_network = 3; model.social_url = "https://bsky.app/profile/chan.dev"; ++model.profile_revision;
     badge::ui_update(model);
     spin();
+    assert(!visible_label("GitHub"));
     tap(234, 180);
-    assert(!find_label(lv_display_get_screen_active(display), "No account yet"));
-    assert(visible_label("X / Twitter"));
+    assert(visible_label("Bluesky") && lit_pixels(130, 100, 338, 308) > 20000);
     tap(234, 180);
     assert(badge::ui_page_index() == 3 && !badge::ui_setup_active());
     assert_chrome(false, true);
@@ -1111,7 +1107,7 @@ int main(int argc, char** argv) {
     // profile change must not leave a code showing for stale profile data.
     model.name.clear(); model.company.clear(); model.avatar = nullptr;
     model.avatar_width = model.avatar_height = 0;
-    model.selected_network = 0; ++model.profile_revision;
+    model.social_network = 0; model.social_url = "https://github.com/octocat"; ++model.profile_revision;
     badge::ui_update(model); spin();
     tap(234, 180); spin();
     assert(visible_label("GitHub") && lit_pixels(130, 100, 338, 308) > 20000);

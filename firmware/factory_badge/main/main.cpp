@@ -4,6 +4,7 @@
 #include "clock_service.h"
 #include "services.h"
 #include "wifi_config.h"
+#include "social_networks.h"
 #include "conference_settings.h"
 #include "schedule.h"
 #include "schedule_bookmarks.h"
@@ -41,7 +42,7 @@ bool preferencesReady = false, rotationPending = false;
 bool setupRequested = false;
 bool resetRequested = false, resetNeedsPreferences = false;
 uint32_t resetProfileRevision = 0;
-uint32_t preferenceWrites = 0, networkSaveAt = 0, lastImu = 0, lastModel = 0;
+uint32_t preferenceWrites = 0, lastImu = 0, lastModel = 0;
 uint32_t loopCount = 0, inputCount = 0, maxLoopGap = 0, lastLoop = 0;
 std::string serialLine;
 bool serialOverflow = false;
@@ -93,7 +94,8 @@ void refreshModel() {
     model.name = profile.profile.name;
     model.company = profile.profile.company;
     model.schedule_bookmarks = bookmarks.mask();
-    for (size_t i = 0; i < 3; ++i) model.socials[i] = profile.profile.urls[i];
+    model.social_network = profile.profile.network;
+    model.social_url = badge_social::url(profile.profile.network, profile.profile.handle);
     model.avatar = profile.avatar && !profile.avatar->empty() ? profile.avatar->data() : nullptr;
     model.avatar_width = model.avatar_height = model.avatar ? 160 : 0;
     model.profile_revision = profile.revision;
@@ -136,8 +138,8 @@ void status(const char* nonce) {
     esp_flash_get_size(nullptr, &flashSize);
     wifi_mode_t wifi = WIFI_MODE_NULL;
     esp_wifi_get_mode(&wifi);
-    int mask = 0;
-    for (int i = 0; i < 3; ++i) if (!saved.profile.urls[i].empty()) mask |= 1 << i;
+    // Bit per network index; at most one is ever set.
+    const int mask = saved.profile.network >= 0 ? 1 << saved.profile.network : 0;
     JsonDocument data;
     data["build"] = Build; data["framework"] = "ESP-IDF/LVGL/Smooth/Mooncake";
     data["page_count"] = badge::ui_page_count(); data["page"] = badge::ui_page_index();
@@ -148,7 +150,8 @@ void status(const char* nonce) {
     data["brightness_percent"] = settings.brightness;
     data["orientation_mode"] = settings.orientationName();
     data["rotation"] = board::rotation(); data["preferences_pending"] = settings.pending();
-    data["preference_writes"] = preferenceWrites; data["network"] = model.selected_network;
+    data["preference_writes"] = preferenceWrites;
+    data["social_network"] = saved.profile.network >= 0 ? badge_social::Networks[saved.profile.network].key : "";
     data["configured_mask"] = mask; data["avatar"] = bool(saved.avatar);
     data["company_present"] = !saved.profile.company.empty();
     data["schedule_bookmarks"] = bookmarks.mask();
@@ -301,7 +304,8 @@ void command(JsonDocument& data) {
         }
         const bool named = data["handle"].is<const char*>();
         const std::string handle = named ? data["handle"].as<std::string>() : std::string();
-        const bool ok = !setupRequested && badge::photo_fetch_request(data["network"] | -1,
+        const int network = data["network"].is<const char*>() ? badge_social::find(data["network"].as<std::string>()) : (data["network"] | -1);
+        const bool ok = !setupRequested && badge::photo_fetch_request(network,
             provided ? &temporary : nullptr, named ? &handle : nullptr);
         std::fill(temporary.password.begin(), temporary.password.end(), '\0');
         JsonDocument result; result["ok"] = ok; result["nonce"] = nonce;
@@ -419,10 +423,6 @@ void persist(uint32_t now) {
             ++preferenceWrites; settings.saved();
         } else settings.saveFailed(now);
     }
-    if (networkSaveAt && int32_t(now - networkSaveAt) >= 0) {
-        bool saved = preferencesReady && nvs_set_u8(preferences, "network", model.selected_network) == ESP_OK && nvs_commit(preferences) == ESP_OK;
-        networkSaveAt = saved ? 0 : now + 5000;
-    }
 }
 void requestReset() {
     if (resetRequested || setupRequested) return;
@@ -457,7 +457,6 @@ void pollReset() {
     badge_schedule::Bookmarks emptyBookmarks;
     const bool saved = preferencesReady &&
         nvs_set_u32(preferences, "prefs", defaults.encoded()) == ESP_OK &&
-        nvs_set_u8(preferences, "network", 0) == ESP_OK &&
         nvs_set_u32(preferences, "agenda_saved", emptyBookmarks.encoded()) == ESP_OK &&
         nvs_set_u8(preferences, "after_dark_v1", badge_after_dark::Unlock::SavedLocked) == ESP_OK &&
         nvs_commit(preferences) == ESP_OK;
@@ -467,8 +466,6 @@ void pollReset() {
         settings = defaults;
         bookmarks = emptyBookmarks;
         afterDark.restore(badge_after_dark::Unlock::SavedLocked);
-        model.selected_network = 0;
-        networkSaveAt = 0;
         board::setBrightness(settings.brightness);
         rotationPending = true;
         resetNeedsPreferences = false;
@@ -507,15 +504,15 @@ extern "C" void app_main() {
     esp_err_t nvs = nvs_flash_init();
     if (nvs != ESP_OK || !board::init()) { line("CONFERENCE_BOOT_FAILED"); return; }
     preferencesReady = nvs_open("conference_ui", NVS_READWRITE, &preferences) == ESP_OK;
-    uint32_t value = 0, savedBookmarks = 0; uint8_t network = 0, savedUnlock = 0;
+    uint32_t value = 0, savedBookmarks = 0; uint8_t savedUnlock = 0;
     if (preferencesReady) {
-        nvs_get_u32(preferences, "prefs", &value); nvs_get_u8(preferences, "network", &network);
+        nvs_get_u32(preferences, "prefs", &value);
         nvs_get_u8(preferences, "after_dark_v1", &savedUnlock);
         nvs_get_u32(preferences, "agenda_saved", &savedBookmarks);
     }
     afterDark.restore(savedUnlock);
     bookmarks.restore(savedBookmarks);
-    settings.restore(value); model.selected_network = network < 3 ? network : 0;
+    settings.restore(value);
     // A finger held during boot can defer rotation. Keep the filter aligned
     // with the actual display and retry the saved fixed mode after release.
     rotationPending = !board::setRotation(settings.automatic() ? 2 : settings.fixedRotation());
@@ -535,11 +532,6 @@ extern "C" void app_main() {
     callbacks.orientation = [](badge::Orientation mode) {
         if (settings.setOrientation(static_cast<ConferenceOrientationMode>(mode), board::millis())) rotationPending = true;
         refreshModel();
-    };
-    callbacks.network = [](int selected) {
-        if (selected >= 0 && selected < 3 && selected != model.selected_network) {
-            model.selected_network = selected; networkSaveAt = board::millis() + 1200;
-        }
     };
     callbacks.bookmark = [](int index) {
         if (bookmarks.toggle(index, board::millis())) refreshModel();

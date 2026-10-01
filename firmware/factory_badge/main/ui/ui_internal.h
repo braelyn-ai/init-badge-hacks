@@ -19,7 +19,6 @@ inline int visible_page_count(const UiModel&) {
     return PageCount;
 }
 inline constexpr const char* PageNames[] = {"init()", "Schedule", "Party", "Badge", "Settings"};
-inline constexpr const char* NetworkNames[] = {"GitHub", "X / Twitter", "LinkedIn"};
 inline constexpr const char* HackUrl = "https://workos.com/init/badge";
 
 struct Context {

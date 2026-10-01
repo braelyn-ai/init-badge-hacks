@@ -56,7 +56,7 @@ badge::UiModel model;
 nvs_handle_t preferences = 1;
 bool preferencesReady = true, rotationPending = false, setupRequested = false;
 bool resetRequested = false, resetNeedsPreferences = false;
-uint32_t resetProfileRevision = 0, preferenceWrites = 0, networkSaveAt = 0;
+uint32_t resetProfileRevision = 0, preferenceWrites = 0;
 unsigned refreshes = 0;
 void refreshModel() { ++refreshes; }
 
@@ -66,15 +66,15 @@ void baseline(bool dirty = false) {
     settings.restore(0xc701021e); // 30%, fixed 180 degrees.
     bookmarks.restore(badge_schedule::Bookmarks::Version | 0x105);
     afterDark.restore(badge_after_dark::Unlock::SavedUnlocked);
-    model = {}; model.selected_network = 2;
+    model = {};
     badge::current = {}; badge::current.ready = true; badge::current.revision = 9;
     badge::current.profile.name = "Synthetic attendee";
     badge::current.profile.company = "Synthetic company";
-    badge::current.profile.urls[0] = "https://github.com/example";
+    badge::current.profile.network = 0; badge::current.profile.handle = "example";
     badge::result = {}; badge::accept_request = true; badge::requests = 0;
     preferencesReady = true; rotationPending = setupRequested = false;
     resetRequested = resetNeedsPreferences = false;
-    resetProfileRevision = preferenceWrites = networkSaveAt = 0;
+    resetProfileRevision = preferenceWrites = 0;
     refreshes = operation = fail_operation = 0;
     board::applied_brightness = -1; board::brightness_calls = 0;
     writes.clear(); durable = {{"prefs", settings.encoded()}, {"network", 2},
@@ -83,7 +83,6 @@ void baseline(bool dirty = false) {
     if (dirty) {
         settings.setBrightness(40, 100);
         bookmarks.toggle(1, 100);
-        networkSaveAt = 1300;
     }
 }
 void worker_succeeds() {
@@ -100,8 +99,8 @@ void assert_defaults() {
     assert(settings.orientation == ConferenceOrientationMode::Default && settings.fixedRotation() == 0);
     assert(bookmarks.mask() == 0 && !bookmarks.pending());
     assert(durable.at("prefs") == defaults.encoded());
-    assert(durable.at("network") == 0 && durable.at("agenda_saved") == empty.encoded());
-    assert(model.selected_network == 0 && networkSaveAt == 0);
+    // The retired card-selection key stays dormant; reset no longer writes it.
+    assert(durable.at("network") == 2 && durable.at("agenda_saved") == empty.encoded());
     assert(badge::wifi_forgets > 0);
     assert(board::applied_brightness == 60 && rotationPending);
     assert(model.reset_state == badge::ResetState::Complete && !resetRequested && !resetNeedsPreferences);
@@ -119,7 +118,7 @@ int main() {
     pollReset(); persist(2000); assert(writes.empty());
     worker_succeeds(); pollReset();
     assert_defaults();
-    assert(writes == std::vector<std::string>({"prefs", "network", "agenda_saved", "after_dark_v1", "commit"}));
+    assert(writes == std::vector<std::string>({"prefs", "agenda_saved", "after_dark_v1", "commit"}));
     const auto saved_writes = writes.size(); pollReset(); persist(4000);
     assert(writes.size() == saved_writes && badge::requests == 1);
 
@@ -142,26 +141,26 @@ int main() {
     assert(!resetRequested && model.reset_state == badge::ResetState::Failed && writes.empty());
     baseline(true); requestReset(); badge::result = {badge::ProfileResetState::Failed, "Synthetic failure"}; pollReset();
     assert(!resetRequested && !resetNeedsPreferences && model.reset_state == badge::ResetState::Failed);
-    assert(settings.brightness == 40 && bookmarks.mask() == 0x107 && model.selected_network == 2);
+    assert(settings.brightness == 40 && bookmarks.mask() == 0x107);
     assert(badge::current.profile.name == "Synthetic attendee" && writes.empty());
     persist(2000);
-    assert(!settings.pending() && !bookmarks.pending() && !networkSaveAt);
+    assert(!settings.pending() && !bookmarks.pending());
     assert(durable.at("prefs") == settings.encoded() && durable.at("agenda_saved") == bookmarks.encoded());
     assert(afterDark.unlocked() && !afterDark.pending());
     assert(durable.at("after_dark_v1") == badge_after_dark::Unlock::SavedUnlocked);
     assert_unrelated_preserved();
     baseline(); setupRequested = true; requestReset(); assert(!resetRequested && badge::requests == 0);
 
-    for (unsigned failed = 1; failed <= 5; ++failed) {
+    for (unsigned failed = 1; failed <= 4; ++failed) {
         baseline(); const auto old_settings = settings.encoded(); const auto old_marks = bookmarks.mask();
         requestReset(); worker_succeeds(); fail_operation = failed; pollReset();
         assert(!resetRequested && resetNeedsPreferences && model.reset_state == badge::ResetState::SettingsFailed);
         assert(badge::current.profile.name.empty() && badge::current.revision == resetProfileRevision);
-        assert(settings.encoded() == old_settings && bookmarks.mask() == old_marks && model.selected_network == 2);
+        assert(settings.encoded() == old_settings && bookmarks.mask() == old_marks);
         assert(board::brightness_calls == 0 && !rotationPending && !preferenceWrites);
         assert(writes.size() == failed); // Short-circuit after the failed operation.
         assert(afterDark.unlocked() && !afterDark.pending());
-        assert(durable.at("after_dark_v1") == (failed == 5
+        assert(durable.at("after_dark_v1") == (failed == 4
             ? badge_after_dark::Unlock::SavedLocked : badge_after_dark::Unlock::SavedUnlocked));
         assert_unrelated_preserved();
         // No auto-retry or replay of the destructive worker request.
