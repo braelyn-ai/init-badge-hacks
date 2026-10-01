@@ -876,3 +876,12 @@ phone upload were removed, along with the `/image` endpoint and staging: Save
 downloads the account's photo after setup when the badge has none or the
 account changed, and a changed account first clears the old photo. Unrecognized
 Other links stay QR-only.
+
+### October 1 pusher shortcut and Advanced settings
+
+Holding both pushers for 500 ms opens Settings at its home menu from any page
+or submenu (`BadgeButtonGesture::CHORD_HOLD_MS`); a chord released sooner does
+nothing, and single pushers still page. This replaces "both open setup"; phone
+setup is Settings → Connect phone. Settings home is Brightness, Orientation,
+Hack this device, Connect phone, Advanced and Reset, with battery status in
+Mono 18 under the title. Advanced holds Calibrate touch and Touch test.

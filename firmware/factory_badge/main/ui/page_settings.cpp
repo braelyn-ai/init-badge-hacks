@@ -49,7 +49,7 @@ public:
         lv_obj_set_style_text_font(back_icon, LV_FONT_DEFAULT, 0);
         lv_obj_set_style_text_color(back_icon, white(), 0);
         auto* home = home_ = page("Settings");
-        battery_ = text(home, "", &font_mono_12); // Status directly under the title.
+        battery_ = text(home, "", &font_mono_18); // Status directly under the title.
         lv_obj_set_style_text_color(battery_, muted(), 0);
         auto* light = page("Brightness");
         brightness_ = text(light, "", &font_sans_24);
@@ -62,7 +62,10 @@ public:
             if (context_.callbacks.orientation) context_.callbacks.orientation(context_.model.orientation);
             update();
         });
-        row(rotation, "Touch test", [] { ui_show_touch_test(); });
+        // Less common tools live one level down.
+        auto* advanced = page("Advanced");
+        row(advanced, "Calibrate touch", [this] { if (context_.callbacks.calibrate_touch) context_.callbacks.calibrate_touch(); });
+        row(advanced, "Touch test", [] { ui_show_touch_test(); });
         auto* hack = page("Hack this device");
         auto* code = qr(hack, HackUrl, 0, 0, 216, 22);
         lv_obj_set_style_align(code, LV_ALIGN_CENTER, 0);
@@ -73,9 +76,9 @@ public:
         row(phone, "Connect phone", [this] { request_setup(context_); });
         auto* first_row = row(home, "Brightness", [this, light] { lv_menu_set_page(menu_, light); });
         link(home, "Orientation", rotation);
-        row(home, "Calibrate touch", [this] { if (context_.callbacks.calibrate_touch) context_.callbacks.calibrate_touch(); });
         link(home, "Hack this device", hack);
         link(home, "Connect phone", phone);
+        link(home, "Advanced", advanced);
         row(home, "Reset", [] { ui_show_reset(); });
         action_ = button(root_, "Done", HeadingX + 8, ActionTop, 272, ActionHeight, [this] { act(); });
         lv_obj_set_style_bg_color(action_, white(), 0);

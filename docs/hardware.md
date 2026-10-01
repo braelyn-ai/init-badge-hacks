@@ -481,7 +481,7 @@ ESPtember Day 07 (`days/day-07-touch-calibration/SPEC.md` in
 `chantastic/esptember`) specifies a device-measured affine transform plus local
 warp, stored as `espt-touch/record` with CRC, geometry and rotation validation.
 Day 08 consumes that record before delivering coordinates to LVGL. This badge now loads both record versions and applies the map to raw CST820
-coordinates before LVGL rotation. Settings → Calibrate touch runs
+coordinates before LVGL rotation. Settings → Advanced → Calibrate touch runs
 a compact nine-target affine fit plus five independent verification targets,
 saving a compatible v1 record after success. It is not the complete Day 07
 perimeter/local-warp collection exercise. Existing v2 maps retain their complete

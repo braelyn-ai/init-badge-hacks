@@ -766,14 +766,24 @@ int main(int argc, char** argv) {
     assert(brightness == 0);
     tap_text("Increase"); assert(brightness == 70);
     menu_back(); tap_text("Orientation"); tap_text("180°"); assert(orientation == 2);
+    assert(!action_label(lv_screen_active(), "Touch test")); // Moved to Advanced.
     tap(434, 233); assert(badge::ui_page_index() == 4); // Page arrows are hidden in submenus.
     snapshot("settings-orientation");
     menu_back();
     // The clock is set only through phone setup; Settings has no manual editor.
     assert(!action_label(lv_screen_active(), "Date / time"));
     assert(!widget(lv_screen_active(), &lv_calendar_class) && !widget(lv_screen_active(), &lv_roller_class));
-    tap_text("Calibrate touch"); // A top-level row that opens the wizard directly.
+    assert(!action_label(lv_screen_active(), "Calibrate touch")); // Only under Advanced.
+    tap_text("Advanced");
+    assert(action_label(lv_screen_active(), "Touch test"));
+    tap_text("Calibrate touch");
     assert(calibration_requests == 1 && badge::ui_page_index() == 4);
+    // Holding both pushers opens Settings at its home menu, from a submenu or any page.
+    badge::ui_button(true, 1); spin();
+    assert(badge::ui_page_index() == 4 && action_label(lv_screen_active(), "Brightness"));
+    badge::ui_page(-3); spin(); assert(badge::ui_page_index() == 1);
+    badge::ui_button(true, 1); spin();
+    assert(badge::ui_page_index() == 4 && action_label(lv_screen_active(), "Advanced") && setup == 0);
     tap_text("Hack this device");
     spin();
     assert(lit_pixels(120, 132, 348, 360) > 10000);
@@ -838,7 +848,7 @@ int main(int argc, char** argv) {
     badge::ui_button(false, -1); spin();
     assert(!badge::ui_reset_active() && badge::ui_page_index() == 4 && resets == 3);
 
-    tap_text("Orientation"); tap_text("Touch test");
+    tap_text("Advanced"); tap_text("Touch test");
     assert(badge::ui_touch_test_active());
     badge::ui_touch_sample(234, 234, 234, 234, true, 0);
     snapshot("touch");

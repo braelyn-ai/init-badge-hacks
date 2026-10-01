@@ -69,9 +69,11 @@
   is off, and shows footer status. Never load authenticated identity caches
   into the manual conference model or require a cloud login.
 - Physical screen-left/right pushers are previous/next at rotations 0 and 2;
-  loop-up rotation 2 means blue previous / yellow next. Both open setup; either
+  loop-up rotation 2 means blue previous / yellow next. Holding both for 500 ms opens
+  Settings (home menu; a shorter chord does nothing); either
   exits setup. Preserve completed taps, drag arbitration, and orientation filtering.
-- Settings uses native LVGL menus: Brightness, Orientation, Calibrate touch,
+- Settings uses native LVGL menus: Brightness, Orientation, Advanced (Calibrate
+  touch, Touch test),
   Hack this device, Connect phone, and Reset. There is no on-device date/time
   editor; the clock is set only by phone setup (captive portal) or USB
   provisioning through the main-owned checked clock service. Hack QR URL is https://workos.com/init/badge.
@@ -140,11 +142,11 @@
   `observe_taps` is an explicit, at-most-120-second physical-contact RAM recorder,
   limited to After Dark. Its timestamps describe sensor samples, not exact LVGL
   decisions; keep captures/logs private and stop recording after the requested trial.
-- Settings → Orientation → Touch test is an observation-only modal: five white crosshairs,
+- Settings → Advanced → Touch test is an observation-only modal: five white crosshairs,
   live purple sensor marker retained on release, and current rotation frozen
   without changing the saved mode. Either pusher or the chord returns to Settings.
   Never apply calibration, save touch data, or start networking from this test.
-  Settings → Calibrate touch is a separate measurement wizard.
+  Settings → Advanced → Calibrate touch is a separate measurement wizard.
   It collects real raw contacts at nine fit and five holdout targets in rotation 0,
   saves an ESPtember-compatible affine map only after validation, and preserves
   the prior map on cancellation. The board loads validated espt-touch/record v1/v2

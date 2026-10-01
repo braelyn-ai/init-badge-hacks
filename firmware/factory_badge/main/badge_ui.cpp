@@ -154,7 +154,8 @@ void ui_button(bool both, int delta) {
         if (context.callbacks.close_setup) context.callbacks.close_setup();
         return;
     }
-    if (both) ui::request_setup(context);
+    // Holding both pushers opens Settings at its home menu from any page.
+    if (both) { context.page = ui::SettingsPageIndex; context.rebuild = true; pending_gesture = 0; }
     else ui_page(delta);
 }
 void ui_show_setup(const std::string& ssid, const std::string& password, const std::string& ip, const std::string& status) {
