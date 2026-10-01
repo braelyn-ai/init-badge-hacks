@@ -276,7 +276,7 @@ std::string page() {
   replace_token(html, "{{NONCE}}", session_nonce);
   replace_token(html, "{{PHOTO}}", current.avatar ? "Your saved photo will be kept unless you replace or remove it." : "No saved photo. A placeholder will appear until you add one.");
   replace_token(html, "{{WIFI_SSID}}", escape(wifi.ssid));
-  replace_token(html, "{{WIFI_STATUS}}", custom ? "A different network is saved on this badge. Wi-Fi is off until you test or refresh." : "Using the built-in event Wi-Fi. Wi-Fi is off until you test or refresh.");
+  replace_token(html, "{{WIFI_STATUS}}", custom ? "This badge has a different network saved." : "Using the built-in event Wi-Fi.");
   replace_token(html, "{{LINKEDIN}}", escape(current.profile.urls[2])); replace_token(html, "{{X}}", escape(current.profile.urls[1]));
   replace_token(html, "{{GITHUB}}", escape(current.profile.urls[0])); replace_token(html, "{{COMPANY}}", escape(current.profile.company));
   replace_token(html, "{{NAME}}", escape(current.profile.name)); return html;
@@ -311,7 +311,7 @@ bool json_fields(cJSON* root, const std::vector<const char*>& allowed) {
 }
 bool profile_form(cJSON* root, const Profile& previous, Profile& candidate, std::string& error) {
   const char* fields[] = {"name", "github", "x", "linkedin", "image", "imageToken"};
-  if (!json_fields(root, {fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], "company"})) {
+  if (!json_fields(root, {fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], "company", "ssid", "password"})) {
     error = "Unexpected form field."; return false;
   }
   for (auto field : fields) if (!cJSON_IsString(cJSON_GetObjectItemCaseSensitive(root, field))) {
@@ -356,37 +356,6 @@ esp_err_t handle_get(httpd_req_t* req) {
   httpd_resp_set_hdr(req, "Cache-Control", "no-store"); httpd_resp_set_hdr(req, "Connection", "close");
   if (strcmp(req->uri, "/")) { httpd_resp_set_status(req, "302 Found"); httpd_resp_set_hdr(req, "Location", "http://192.168.4.1/"); return httpd_resp_send(req, "", 0); }
   httpd_resp_set_type(req, "text/html; charset=utf-8"); auto html = page(); return httpd_resp_send(req, html.data(), html.size());
-}
-bool station_test_connection(const WifiCredentials& credentials) {
-  // Only this explicit action starts the station. The setup AP stays available.
-  if (!station_netif) station_netif = esp_netif_create_default_wifi_sta();
-  if (!station_netif) return false;
-  wifi_config_t config = {};
-  memcpy(config.sta.ssid, credentials.ssid.data(), credentials.ssid.size());
-  memcpy(config.sta.password, credentials.password.data(), credentials.password.size());
-  bool started = esp_wifi_set_mode(WIFI_MODE_APSTA) == ESP_OK &&
-    esp_wifi_set_config(WIFI_IF_STA, &config) == ESP_OK &&
-    esp_wifi_connect() == ESP_OK;
-  bool joined = false;
-  if (started) {
-    const int64_t deadline = monotonic_ms() + 8000;
-    while (session_open() && monotonic_ms() < deadline) {
-      wifi_ap_record_t access = {};
-      esp_netif_ip_info_t ip = {};
-      if (esp_wifi_sta_get_ap_info(&access) == ESP_OK &&
-          esp_netif_get_ip_info(station_netif, &ip) == ESP_OK && ip.ip.addr != 0) {
-        joined = true;
-        break;
-      }
-      vTaskDelay(pdMS_TO_TICKS(100));
-    }
-  }
-  esp_wifi_disconnect();
-  const bool restored = esp_wifi_set_mode(WIFI_MODE_AP) == ESP_OK;
-  esp_netif_destroy_default_wifi(station_netif);
-  station_netif = nullptr;
-  if (!restored) return false;
-  return joined;
 }
 // photo_network < 0 is the 1 KiB connectivity probe; otherwise the complete
 // avatar JPEG (at most kPhotoMaxBytes) is returned in body for saving after
@@ -477,8 +446,7 @@ WifiFetchSnapshot fetch_once(const WifiCredentials& credentials, int photo_netwo
 }
 esp_err_t handle_post(httpd_req_t* req) {
   const bool image = !strcmp(req->uri, "/image"), clock = !strcmp(req->uri, "/clock"), cancel = !strcmp(req->uri, "/cancel"), save = !strcmp(req->uri, "/save");
-  const bool wifi_save = !strcmp(req->uri, "/wifi/save"), wifi_test = !strcmp(req->uri, "/wifi/test"), wifi_forget = !strcmp(req->uri, "/wifi/forget");
-  if (!(image || clock || cancel || save || wifi_save || wifi_test || wifi_forget)) return message(req, 400, "Unknown request.");
+  if (!(image || clock || cancel || save)) return message(req, 400, "Unknown request.");
   std::string nonce, type;
   if (!session_open() || !header(req, "X-Conference-Nonce", nonce, 32) || nonce != session_nonce) return message(req, 403, "Open the current badge setup page.");
   if (httpd_req_get_hdr_value_len(req, "Transfer-Encoding") || req->content_len == 0 || req->content_len > (image ? kImageLimit : 2048)) return message(req, 413, "Request is too large or unsupported.");
@@ -509,27 +477,6 @@ esp_err_t handle_post(httpd_req_t* req) {
   const char* parsed_end = nullptr;
   std::unique_ptr<cJSON, decltype(&cJSON_Delete)> json(cJSON_ParseWithLengthOpts(reinterpret_cast<char*>(bytes.get()), used + 1, &parsed_end, true), cJSON_Delete);
   if (!json || !cJSON_IsObject(json.get())) return message(req, 400, "Invalid form. Reload and try again.");
-  if (wifi_save) {
-    if (!json_fields(json.get(), {"ssid", "password"})) return message(req, 400, "Unexpected Wi-Fi field.");
-    auto ssid = cJSON_GetObjectItemCaseSensitive(json.get(), "ssid"), password = cJSON_GetObjectItemCaseSensitive(json.get(), "password");
-    if (!cJSON_IsString(ssid) || !cJSON_IsString(password)) return message(req, 400, "Enter a network name and optional password.");
-    WifiCredentials credentials{ssid->valuestring, password->valuestring};
-    if (!wifi_credentials_valid(credentials)) return message(req, 400, "Use a network name of 1–32 bytes and either no password or 8–63 characters.");
-    if (!wifi_credentials_save(credentials)) return message(req, 500, "Could not save Wi-Fi. Try again.");
-    return message(req, 200, wifi_credentials_custom() ? "Wi-Fi saved. The badge is offline until you test or refresh." : "Using the built-in event Wi-Fi. The badge is offline until you test or refresh.");
-  }
-  if (wifi_forget) {
-    if (json->child) return message(req, 400, "Unexpected Wi-Fi field.");
-    if (!wifi_credentials_forget()) return message(req, 500, "Could not restore the event Wi-Fi. Try again.");
-    return message(req, 200, "Saved network removed. The badge will use the built-in event Wi-Fi and remains offline.");
-  }
-  if (wifi_test) {
-    if (json->child) return message(req, 400, "Unexpected Wi-Fi field.");
-    WifiCredentials credentials;
-    wifi_credentials_load(credentials);
-    const bool joined = station_test_connection(credentials);
-    return message(req, joined ? 200 : 503, joined ? "Connected to the event Wi-Fi and received an address. Disconnected again." : "Could not join the event Wi-Fi. The badge is offline; check the network and try again.");
-  }
   if (cancel) {
     if (json->child) return message(req, 400, "Unexpected cancel field.");
     auto result = message(req, 200, "Profile changes cancelled. Any successful clock sync is kept. You may close this page.");
@@ -557,20 +504,39 @@ esp_err_t handle_post(httpd_req_t* req) {
   Profile candidate; std::string error;
   if (!profile_form(json.get(), profile_snapshot().profile, candidate, error)) return message(req, 400, error);
   auto value = [&](const char* key) { return cJSON_GetObjectItemCaseSensitive(json.get(), key)->valuestring; };
+  // Wi-Fi is saved with the badge. The page never receives the saved password,
+  // so an unchanged network name with a blank password keeps the saved network.
+  WifiCredentials wifi; wifi_credentials_load(wifi);
+  bool wifi_changed = false;
+  auto ssid = cJSON_GetObjectItemCaseSensitive(json.get(), "ssid"), password = cJSON_GetObjectItemCaseSensitive(json.get(), "password");
+  if (ssid || password) {
+    if (!cJSON_IsString(ssid) || !cJSON_IsString(password)) return message(req, 400, "Enter a Wi-Fi network name and optional password.");
+    WifiCredentials next{trim(ssid->valuestring), password->valuestring};
+    if (next.ssid != wifi.ssid || !next.password.empty()) {
+      if (!wifi_credentials_valid(next)) return message(req, 400, "Use a Wi-Fi name of 1–32 bytes and either no password or 8–63 characters.");
+      wifi = std::move(next); wifi_changed = true;
+    }
+  }
   std::string action = value("image"); bool replace = false; const uint8_t* jpeg = nullptr; size_t jpeg_size = 0;
   int source = -1;
   for (int i = 0; i < 3; ++i) if (action == kPhotoNetworks[i]) source = i;
+  if (action == "auto") {
+    // Automatic: without a saved photo, use the first handle (GitHub, X, LinkedIn).
+    action = "keep";
+    if (!profile_snapshot().avatar) for (int i = 0; i < 3 && source < 0; ++i) if (!candidate.urls[i].empty()) source = i;
+  }
   static const char* names[3] = {"GitHub", "X", "LinkedIn"};
   if (source >= 0) {
     if (candidate.urls[source].empty()) return message(req, 400, std::string("Add your ") + names[source] + " handle to use its photo.");
   } else if (action == "remove") replace = true;
   else if (action == "staged") { if (staged_image.empty() || staged_token != value("imageToken")) return message(req, 400, "Upload your photo again before saving."); replace = true; jpeg = staged_image.data(); jpeg_size = staged_image.size(); }
   else if (action != "keep") return message(req, 400, "Invalid photo choice.");
+  if (wifi_changed && !wifi_credentials_save(wifi)) return message(req, 500, "Could not save Wi-Fi. Try again.");
   if (!save_record(candidate, jpeg, jpeg_size, replace, error)) return message(req, 500, error);
   // The current photo stays until the new one downloads after setup closes.
   const bool queued = source >= 0 && photo_fetch_request(source);
   auto result = message(req, 200, source < 0 ? "Saved on your badge. You may close this page; setup Wi-Fi will turn off."
-    : queued ? std::string("Saved. When setup closes, the badge joins the event Wi-Fi, gets your ") + names[source] + " photo, then turns Wi-Fi off."
+    : queued ? "Saved. When setup closes, the badge joins " + wifi.ssid + ", gets your " + names[source] + " photo, then turns Wi-Fi off."
     : "Saved, but the photo download could not be queued. Open setup again to retry.");
   staged_image.clear(); staged_token.clear(); finish_session(PortalOutcome::Saved); return result;
 }

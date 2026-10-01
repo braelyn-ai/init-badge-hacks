@@ -25,7 +25,7 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
   saveOk=false;
   await element('form').listeners.submit({preventDefault(){}});await settle();
   assert.equal(requests.at(-1).path,'/save');
-  assert.deepEqual(requests.at(-1).parsed,{...values,image:'keep',imageToken:''});
+  assert.deepEqual(requests.at(-1).parsed,{...values,ssid:'',password:'',image:'auto',imageToken:''});
   assert.equal(element('form').hidden,false);
   assert.equal(element('save').disabled,false);
   assert.equal(element('company').value,values.company,'Failed saves keep the user’s edit');

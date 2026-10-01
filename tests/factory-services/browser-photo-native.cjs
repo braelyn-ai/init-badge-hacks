@@ -78,7 +78,7 @@ function png(){
       assert.equal(await page.locator('#save').isDisabled(),true);assert.equal(requests.length,before);
       await page.locator('#discardPhoto').click();await page.locator('#save').click();await page.waitForFunction(()=>document.getElementById('form').hidden);
       assert.deepEqual(requests.slice(before).map(r=>r.path),['/save']);
-      assert.equal(requests.at(-1).parsed.name,'Keep this edit');assert.equal(requests.at(-1).parsed.image,'keep');await context.close();
+      assert.equal(requests.at(-1).parsed.name,'Keep this edit');assert.equal(requests.at(-1).parsed.image,'auto');await context.close();
     }
     console.log(`Native ${await browser.version()}: PNG→centered JPEG preview/upload via normal, FileReader and toDataURL paths; malformed-photo rejection and preserved draft passed`);
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

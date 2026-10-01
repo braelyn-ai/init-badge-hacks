@@ -143,6 +143,38 @@ A matching successful storage acknowledgment and another fresh ready status
 are required. Missing acknowledgment or failed initialization fails the unit.
 The current development board has not been formatted by this workflow.
 
+## Unattended batch station
+
+October 1, 2026: for the ~400-unit batch the user authorized converting factory
+units without prompts or per-unit backups (the stock image is not attendee data).
+`scripts/flash-station.py` watches `/dev/cu.usbmodem*`, runs up to 8 units at
+once, and classifies each one by its exact partition sector, the same allowlist
+as [web-flasher/src/factory.js](../web-flasher/src/factory.js):
+
+| Device | Action |
+| --- | --- |
+| Recognized factory sector | Erase app1/ffat/coredump, write bootloader, target sector, blank settings, app0; then provision |
+| Target sector, app0 equals this build | Provision only (clock; storage init only when not ready) |
+| Target sector, other app, ledger says install started | Resume the full install |
+| Target sector, other app (e.g. the development badge) | Skip, no write |
+| Anything else | Skip, no write |
+
+Provisioning is `provision-clock.py --initialize-profile-storage`; only
+`UNIT_READY` counts as ready. Probing resets every attached board, so keep the
+development badge unplugged or pass `--ignore-port`. A MAC-keyed ledger and
+per-unit logs are written to `.build/station/` (private: they hold hardware IDs).
+`--dry-run` classifies without writing; `--offset-minutes` sets the event offset.
+macOS port names follow the physical hub position, so a slot keeps its name.
+
+Verified October 1 only as a dry run on the development badge (it was classified
+as running this build, and verify-flash matched without writing), plus host
+classification checks. The factory-unit path has **not** yet run on hardware.
+Qualify it on a few units from the delivered batch before running the full batch.
+
+```sh
+python3 scripts/flash-station.py --artifact-dir /absolute/path/to/frozen-release
+```
+
 ## One compiled artifact, many devices
 
 Build once from the reviewed conference source:

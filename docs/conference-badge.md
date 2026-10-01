@@ -320,13 +320,16 @@ Setup creates a temporary password-protected hotspot with a per-device SSID.
 Scan its Wi-Fi QR, then use the captive page or `http://192.168.4.1`.
 The confirmed open event network `init() attendee` (blank password) is compiled
 into firmware as the default, so every badge can refresh at the event without
-setup. The page pre-fills the network in use. Save Wi-Fi stores a different SSID
-and optional password in this badge's NVS without joining the network; saving
-the event network just clears any override. Personal and test networks are never
-compiled in or committed. Test connection briefly joins the saved
-network, waits for an IP address, then disconnects and returns to the setup AP.
-**Use event Wi-Fi** removes the saved override and returns to the built-in network. These are separate from Save badge, so
-editing Wi-Fi cannot silently change a profile. Ordinary badge use keeps the
+setup. The page pre-fills the network in use. Since October 1 there is one
+**Save badge** for profile, photo choice and Wi-Fi together (separate Wi-Fi
+save/test buttons and `/wifi/*` endpoints were removed after attendees' Wi-Fi
+and photo choices were silently dropped). A changed network name, or any typed
+password, is stored in this badge's NVS without joining; an unchanged name with
+a blank password keeps the saved network, because the page never receives the
+saved password. Saving the event network just clears any override. **Use event
+Wi-Fi** only refills the fields. Personal and test networks are never compiled
+in or committed. The Photo picker defaults to **Automatic**: with no saved photo,
+the first handle (GitHub, X, LinkedIn) is fetched after setup. Ordinary badge use keeps the
 station radio off. A USB-requested probe currently makes one certificate-checked
 HTTPS GET to `https://workos.com/init`, reads at most 1 KiB, then disconnects,
 whether the request succeeds or fails. The probe has no unattended timer or
