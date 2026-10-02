@@ -148,7 +148,7 @@ Reset opens the existing confirmation modal. Both Hack QR views use
 
 
 Brightness applies immediately in ten-percentage-point steps, bounded to 10–100%
-with a 60% default. Existing saved brightness remains valid. The minimum maps to a nonzero display level. Brightness and
+with a 70% default (60% before October 1). Existing saved brightness remains valid. The minimum maps to a nonzero display level. Brightness and
 orientation share one versioned NVS value in `conference_ui`; writes coalesce
 after 1.2 seconds without another change. Settings says `Saving settings...` above the pagination dots
 while pending, and a failed write stays pending with a five-second retry.
@@ -169,7 +169,7 @@ blocked; the reset view holds the current orientation.
 
 The existing service worker atomically saves an empty manual profile, clearing
 name, company, photo and social URLs. Main then writes default conference settings:
-60% brightness, Default orientation, first network, no saved agenda bookmarks
+70% brightness (60% before October 1), Default orientation, no saved agenda bookmarks
 and a cleared After Dark unlock. It also removes any saved Wi-Fi override, so the
 badge returns to the built-in event network. It discards any pending unlock save so it cannot
 restore the old invitation state. The clock, legacy records and partition map

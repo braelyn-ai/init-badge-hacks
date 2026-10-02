@@ -764,7 +764,7 @@ int main(int argc, char** argv) {
     assert(brightness == 0);
     touch(ix, iy, true, 40); touch(ix, iy, false);
     assert(brightness == 0);
-    tap_text("Increase"); assert(brightness == 70);
+    tap_text("Increase"); assert(brightness == 80); // 70% default plus one step.
     menu_back(); tap_text("Orientation"); tap_text("180°"); assert(orientation == 2);
     assert(!action_label(lv_screen_active(), "Touch test")); // Moved to Advanced.
     tap(434, 233); assert(badge::ui_page_index() == 4); // Page arrows are hidden in submenus.
@@ -793,7 +793,7 @@ int main(int argc, char** argv) {
     snapshot("settings-hack"); menu_back();
     tap_text("Reset");
     assert(badge::ui_reset_active() && resets == 0);
-    auto* reset_message = find_label(lv_display_get_screen_active(display), "Clears your profile, saved sessions and invitation unlock.\n\nRestores 60% brightness and Default orientation. The clock stays set.");
+    auto* reset_message = find_label(lv_display_get_screen_active(display), "Clears your profile, saved sessions and invitation unlock.\n\nRestores 70% brightness and Default orientation. The clock stays set.");
     assert(reset_message);
     lv_area_t reset_message_area;
     lv_obj_get_coords(reset_message, &reset_message_area);
@@ -830,7 +830,7 @@ int main(int argc, char** argv) {
     model.reset_state = badge::ResetState::Complete;
     model.after_dark_unlocked = false;
     badge::ui_update(model); spin();
-    reset_message = find_label(lv_display_get_screen_active(display), "Your profile, saved sessions and invitation unlock are cleared.\n\nBrightness is 60%. You can configure a new badge.");
+    reset_message = find_label(lv_display_get_screen_active(display), "Your profile, saved sessions and invitation unlock are cleared.\n\nBrightness is 70%. You can configure a new badge.");
     assert(reset_message);
     lv_obj_get_coords(reset_message, &reset_message_area);
     assert(reset_message_area.y2 < 352); // Completion stays above Done.

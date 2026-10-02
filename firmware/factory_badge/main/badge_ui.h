@@ -34,7 +34,7 @@ struct UiModel {
     int64_t clock_epoch = 0;
     int utc_offset_minutes = 0;
     int battery_percent = -1;
-    int brightness_percent = 60;
+    int brightness_percent = 70;
     Orientation orientation = Orientation::Default;
     bool settings_pending = false;
     std::string photo_status; // Footer text while a photo downloads and briefly after.

@@ -77,7 +77,7 @@
   Hack this device, Connect phone, and Reset. There is no on-device date/time
   editor; the clock is set only by phone setup (captive portal) or USB
   provisioning through the main-owned checked clock service. Hack QR URL is https://workos.com/init/badge.
-  Settings is page 4, after Badge; Hack this device exists only in its submenu. Brightness defaults to 60%
+  Settings is page 4, after Badge; Hack this device exists only in its submenu. Brightness defaults to 70%
   with a visible minimum and delayed persistent saves. Display clocks use h:mm
   AM/PM; UTC storage and schedule calculations remain unchanged. Orientation is exactly Free (automatic),
   Default (rotation 0), or 180° (rotation 2); new/reset badges use Default.

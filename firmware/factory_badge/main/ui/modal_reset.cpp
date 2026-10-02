@@ -23,11 +23,11 @@ public:
         const bool working = state == ResetState::Working;
         const bool complete = state == ResetState::Complete;
         set_text(heading_, complete ? "Badge reset" : working ? "Resetting badge" : "Reset badge?");
-        const char* message = "Clears your profile, saved sessions and invitation unlock.\n\nRestores 60% brightness and Default orientation. The clock stays set.";
+        const char* message = "Clears your profile, saved sessions and invitation unlock.\n\nRestores 70% brightness and Default orientation. The clock stays set.";
         if (working) message = "Clearing your badge and saving its default settings...";
         else if (state == ResetState::Failed) message = "Your profile could not be cleared. It has been kept.\n\nTry again when setup is closed.";
         else if (state == ResetState::SettingsFailed) message = "Your profile was cleared. Some settings may have changed.\n\nTap Retry to finish the reset.";
-        else if (complete) message = "Your profile, saved sessions and invitation unlock are cleared.\n\nBrightness is 60%. You can configure a new badge.";
+        else if (complete) message = "Your profile, saved sessions and invitation unlock are cleared.\n\nBrightness is 70%. You can configure a new badge.";
         set_text(message_, message);
         set_hidden(confirm_, working || complete);
         set_text(lv_obj_get_child(confirm_, 0), state == ResetState::Ready ? "Reset badge" : "Retry");

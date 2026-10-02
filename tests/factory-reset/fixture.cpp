@@ -102,7 +102,7 @@ void assert_defaults() {
     // The retired card-selection key stays dormant; reset no longer writes it.
     assert(durable.at("network") == 2 && durable.at("agenda_saved") == empty.encoded());
     assert(badge::wifi_forgets > 0);
-    assert(board::applied_brightness == 60 && rotationPending);
+    assert(board::applied_brightness == 70 && rotationPending);
     assert(model.reset_state == badge::ResetState::Complete && !resetRequested && !resetNeedsPreferences);
     assert(!afterDark.unlocked() && !afterDark.pending() && !afterDark.saveDue(10000));
     assert(durable.at("after_dark_v1") == badge_after_dark::Unlock::SavedLocked);

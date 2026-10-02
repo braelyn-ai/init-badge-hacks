@@ -59,11 +59,11 @@ int main() {
   assert(outside.x<0 && outside.y>467); // No hidden edge clamp.
 
   ConferenceSettings settings, restored;
-  assert(settings.brightness == 60 && !settings.automatic() && settings.fixedRotation() == 0 && !settings.pending());
-  assert(settings.orientation == ConferenceOrientationMode::Default && settings.encoded() == 0xc701013cu);
+  assert(settings.brightness == 70 && !settings.automatic() && settings.fixedRotation() == 0 && !settings.pending());
+  assert(settings.orientation == ConferenceOrientationMode::Default && settings.encoded() == 0xc7010146u);
   for (uint32_t invalid : {0u, 0xc701030au, 0xc7010000u}) {
     assert(!restored.restore(invalid));
-    assert(restored.brightness == 60 && restored.orientation == ConferenceOrientationMode::Default);
+    assert(restored.brightness == 70 && restored.orientation == ConferenceOrientationMode::Default);
     assert(restored.fixedRotation() == 0 && !restored.pending());
   }
   // A new default does not overwrite deliberately saved orientation choices.
