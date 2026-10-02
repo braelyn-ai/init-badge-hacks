@@ -10,7 +10,7 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const digest = bytes => new Uint8Array(createHash("md5").update(bytes).digest());
 function manifest() {
   return {
-    schema_version: 1, build_id: "conference-factory-3",
+    schema_version: 1, build_id: "v1.0.0",
     hardware: { chip: "esp32s3", flash_bytes: 16777216, psram_bytes: 8388608 },
     flash: { erase_all: false, requires_partition_match: true },
     partition_table: { offset: 0x8000, sector_size: 4096, sector_sha256: "a".repeat(64) },

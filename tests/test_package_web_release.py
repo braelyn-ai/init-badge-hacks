@@ -24,7 +24,7 @@ def partition_table(entries=None):
     return data.ljust(0xC00, b"\xff")
 
 
-def image(app=False, build_id=BUILD, project="conference_badge", chip=9, mode=2, frequency_size=0x4F):
+def image(app=False, build_id=BUILD, project="conference_badge", chip=9, mode=2, frequency_size=0x4F, version="abc1234-dirty"):
     header = bytearray(24)
     header[:4] = bytes([0xE9, 1, mode, frequency_size])
     struct.pack_into("<H", header, 12, chip)
@@ -32,7 +32,7 @@ def image(app=False, build_id=BUILD, project="conference_badge", chip=9, mode=2,
     payload = bytearray(256 if app else 64)
     if app:
         struct.pack_into("<I", payload, 0, 0xABCD5432)
-        for offset, text in ((16, "abc1234-dirty"), (48, project), (80, "12:34:56"), (96, "Sep 17 2026"), (112, "v5.5.4")):
+        for offset, text in ((16, version), (48, project), (80, "12:34:56"), (96, "Sep 17 2026"), (112, "v5.5.4")):
             payload[offset:offset + len(text)] = text.encode()
         payload[144:176] = hashlib.sha256(b"synthetic ELF").digest()
         payload += build_id.encode() + b"\0"
@@ -172,6 +172,15 @@ class PackageTests(unittest.TestCase):
             self.write("firmware", data)
             with self.assertRaises(RuntimeError):
                 self.pack()
+
+    def test_semver_build_id_must_match_app_version(self):
+        self.write("firmware", image(app=True, build_id="v1.0.0", version="abc1234-dirty"))
+        with self.assertRaisesRegex(RuntimeError, "does not match the app version"):
+            package.package_release(self.artifacts, self.output, self.repo, "v1.0.0")
+        self.write("firmware", image(app=True, build_id="v1.0.0", version="1.0.0"))
+        release = package.package_release(self.artifacts, self.output, self.repo, "v1.0.0")
+        manifest = json.loads((release / "release.json").read_text())
+        self.assertEqual((manifest["build_id"], manifest["channel"]), ("v1.0.0", "stable"))
 
     def test_input_symlink_rejected(self):
         path = self.path("firmware"); data = path.read_bytes(); path.unlink()

@@ -100,7 +100,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     device = Device(args.port)
     original = device.status()
-    assert original["build"] == "conference-factory-3"
+    assert original["build"] == "v" + (ROOT / "firmware/factory_badge/version.txt").read_text().strip()
     assert original.get("design") == "init-2026", "Verifier requires the init-2026 control layout"
     require_public_profile(original)
     firmware = ROOT / ".build/firmware/devices_badge.ino.bin"

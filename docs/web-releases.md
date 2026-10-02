@@ -5,6 +5,31 @@ assets, never Git source files or copies of a device's flash. The first alpha is
 `conference-factory-3`, the same application verified in
 [schedule verification](schedule-verification-2026-09-17.md).
 
+## Versioned releases (from v1.0.0)
+
+Releases use semantic versions. `firmware/factory_badge/version.txt` (`1.0.0`)
+is the single source: ESP-IDF stamps it into the app descriptor, the firmware
+reports `v1.0.0` as its readiness build ID, `provision-clock.py`,
+`verify-factory.py` and the packager read it, and the web installer pins the
+same value (checked by `web-flasher/test/release-version.test.js`). Bump it for
+every release (`1.0.1` fixes, `1.1.0` features).
+
+1. Change `version.txt`, run the checks, commit, and tag `vX.Y.Z` on
+   `chantastic/stopwatch`.
+2. Build from that clean commit (`scripts/build.sh`), then package:
+   `python3 scripts/package-web-release.py` (build ID defaults to `v` + version).
+   A stable `vX.Y.Z` release refuses a dirty worktree or an app whose embedded
+   version differs. Verify with `--verify .build/web-release/releases/vX.Y.Z`.
+3. Qualify the exact folder on hardware: the update path on a configured badge
+   and the station's first-install path on a few factory units.
+4. Publish the same four files (`release.json`, `bootloader.bin`,
+   `partition-table.bin`, `firmware.bin`) as GitHub Release `vX.Y.Z` on
+   `chantastic/stopwatch`, then hand the folder to workos.com/init/badge/install
+   (`/init/badge/install/releases/vX.Y.Z/`), and run the batch station with
+   `scripts/flash-station.py --release .build/web-release/releases/vX.Y.Z`.
+
+Earlier `conference-factory-*` alphas remain in `chantastic/m5stack-stopwatch-authkit`.
+
 ## Hosting
 
 - Requested entry: `https://drops.workos.cloud/stopwatch` redirects to the installer.

@@ -27,7 +27,7 @@
 #include <array>
 
 namespace {
-constexpr char Build[] = "conference-factory-3";
+constexpr char Build[] = BADGE_RELEASE; // From ../version.txt, e.g. "v1.0.0".
 ConferenceSettings settings;
 OrientationFilter orientation;
 BadgeButtonGesture buttons;

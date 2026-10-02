@@ -172,8 +172,14 @@ classification checks. The factory-unit path has **not** yet run on hardware.
 Qualify it on a few units from the delivered batch before running the full batch.
 
 ```sh
-python3 scripts/flash-station.py --artifact-dir /absolute/path/to/frozen-release
+python3 scripts/flash-station.py --release .build/web-release/releases/v1.0.0
 ```
+
+`--release` verifies the packaged `release.json` (sizes, SHA-256, partition
+sector, embedded app version) before any write, flashes exactly those files and
+requires the release's `expected_build` during provisioning, so the batch gets
+the same bytes as the published release. `--artifact-dir` (raw build output)
+remains for development.
 
 ## One compiled artifact, many devices
 

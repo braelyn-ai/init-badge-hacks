@@ -24,6 +24,9 @@
   retained `scripts/promote-site.sh` belongs to the former WorkOS review workflow
   and cannot publish this repo; a replacement publisher is pending. A source
   push or device flash does not deploy the website.
+- Releases are semantic versions from `firmware/factory_badge/version.txt`
+  (v1.0.0 first); see `docs/web-releases.md`. One packaged folder feeds the
+  GitHub release, workos.com/init/badge/install and `flash-station.py --release`.
 - Current approved public firmware files remain in the original GitHub release
   repository, pinned by exact hashes in `site/src/release-config.json`. Moving
   source ownership does not change those files or their download URLs. New firmware

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Package a guarded StopWatch preservation update; never access a device.
 
-Example, after building and verifying the intended firmware:
-  python3 scripts/package-web-release.py --build-id conference-factory-4
-  python3 scripts/package-web-release.py --verify .build/web-release/releases/conference-factory-4
+Example, after building the intended firmware from a clean, tagged commit:
+  python3 scripts/package-web-release.py --build-id v1.0.0
+  python3 scripts/package-web-release.py --verify .build/web-release/releases/v1.0.0
 
 Only the application, bootloader and exact partition table are exported. No
 filesystem, NVS, OTA-selection image, backup, merged image or device dump is read.
@@ -42,13 +42,14 @@ ARTIFACTS = (
     ("firmware", "conference_badge.bin", "firmware.bin", APP_OFFSET, APP_LIMIT),
 )
 LIMITATIONS = [
-    "Alpha release: team testing is required before conference-wide deployment.",
-    "This preservation update requires an exact existing partition-sector match; factory or unknown layouts need a separate reviewed migration.",
+    "This preservation update requires an exact existing partition-sector match; factory layouts use the separate reviewed first-install path.",
     "Only app0 is updated. OTA boot selection is preserved, so the installed build must be verified after restart.",
     "A fresh computer-clock sync and verified advancing RTC are required after flashing; the binary contains no provisioning timestamp.",
-    "Real-phone captive setup, image save/edit and clock sync remain unqualified end to end; captive discovery has known iOS redirect and DNS compatibility gaps.",
+    "Captive-portal discovery has known iOS redirect and DNS compatibility gaps; 192.168.4.1 is the manual fallback.",
+    "Profile photos download from avatar.chan.dev only when an attendee saves a recognized account and Wi-Fi is reachable.",
     "Battery runtime and clock retention after complete battery exhaustion remain unqualified.",
 ]
+RELEASE_VERSION = (ROOT / "firmware/factory_badge/version.txt").read_text().strip()
 
 
 def sha256(data: bytes) -> str:
@@ -143,6 +144,9 @@ def validate_parts(parts: dict[str, bytes], build_id: str) -> dict:
     app = parse_image(parts["firmware"], "firmware", APP_LIMIT)
     if build_id.encode("ascii") + b"\0" not in parts["firmware"]:
         raise RuntimeError("Requested build ID was not found in the firmware image; rebuild or correct --build-id")
+    version = app["application"]["project_version"]
+    if re.fullmatch(r"v\d+\.\d+\.\d+", build_id) and build_id != f"v{version}":
+        raise RuntimeError(f"Build ID {build_id} does not match the app version {version} from version.txt")
     return {"sector_sha256": sector_hash, "bootloader": boot, "firmware": app}
 
 
@@ -182,7 +186,8 @@ def partition_metadata(sector_hash: str) -> dict:
 
 def release_manifest(parts: dict[str, bytes], build_id: str, source: dict, validated: dict) -> dict:
     return {
-        "schema_version": SCHEMA_VERSION, "build_id": build_id, "channel": "alpha",
+        "schema_version": SCHEMA_VERSION, "build_id": build_id,
+        "channel": "stable" if re.fullmatch(r"v\d+\.\d+\.\d+", build_id) else "alpha",
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "hardware": {"model": "M5Stack StopWatch", "chip": "esp32s3", "chip_id": CHIP_ID,
                      "flash_bytes": FLASH_BYTES, "psram_bytes": PSRAM_BYTES, "psram_mode": "opi"},
@@ -237,8 +242,8 @@ def verify_release(directory: Path) -> dict:
         # JSON distinguishes booleans from numbers; Python's equality does not.
         if json.dumps(manifest.get(key), sort_keys=True) != json.dumps(expected_manifest[key], sort_keys=True):
             raise RuntimeError(f"Release {key} does not match validated artifact requirements")
-    if manifest.get("channel") != "alpha" or manifest.get("limitations") != LIMITATIONS:
-        raise RuntimeError("Release must retain the alpha limitations")
+    if manifest.get("channel") != expected_manifest["channel"] or manifest.get("limitations") != LIMITATIONS:
+        raise RuntimeError("Release must retain its channel and limitations")
     source = manifest.get("source")
     if not isinstance(source, dict) or type(source.get("dirty")) is not bool or source.get("artifact_source_verified") is not False or source.get("capture_scope") != "packaging_worktree":
         raise RuntimeError("Release must retain honest packaging-worktree source metadata")
@@ -267,6 +272,8 @@ def package_release(artifact_dir: Path, output_root: Path, repo: Path, build_id:
     check_expected(parts, expected_hashes or {})
     validated = validate_parts(parts, build_id)
     manifest = release_manifest(parts, build_id, source_metadata(repo), validated)
+    if manifest["channel"] == "stable" and manifest["source"]["dirty"]:
+        raise RuntimeError("Stable releases must be packaged from a clean, committed worktree")
     output_root.mkdir(parents=True, exist_ok=True)
     temporary = Path(tempfile.mkdtemp(prefix=".package-", dir=output_root))
     try:
@@ -292,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--artifact-dir", type=Path, default=ROOT / ".build/factory")
     parser.add_argument("--output-root", type=Path, default=ROOT / ".build/web-release/releases")
-    parser.add_argument("--build-id", help="Exact runtime build ID embedded in the app image")
+    parser.add_argument("--build-id", help=f"Exact runtime build ID embedded in the app image (default v{RELEASE_VERSION} from version.txt)")
     parser.add_argument("--expected-sha256", action="append", default=[], metavar="NAME=SHA256",
                         help="Optional previously reviewed digest for firmware, bootloader or partition-table")
     parser.add_argument("--verify", type=Path, metavar="RELEASE_DIRECTORY", help="Read-only verification of an existing release")
@@ -303,8 +310,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = verify_release(args.verify)
         print(f"Verified {manifest['build_id']}: three preservation-update artifacts and exact partition sector.")
         return 0
-    if not args.build_id:
-        parser.error("--build-id is required when packaging")
+    args.build_id = args.build_id or f"v{RELEASE_VERSION}"
     expected = {}
     for pair in args.expected_sha256:
         name, sep, value = pair.partition("=")

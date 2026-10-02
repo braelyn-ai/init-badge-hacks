@@ -45,7 +45,7 @@ export async function verifiedRead(loader, transport, offset, size) {
 }
 
 export function validateManifest(release) {
-  if (release.schema_version !== 1 || release.build_id !== "conference-factory-3" ||
+  if (release.schema_version !== 1 || release.build_id !== "v1.0.0" ||
       release.hardware?.chip !== "esp32s3" || release.hardware?.flash_bytes !== 16777216 ||
       release.hardware?.psram_bytes !== 8388608 || release.flash?.erase_all !== false ||
       release.flash?.requires_partition_match !== true || release.partition_table?.offset !== 0x8000 ||

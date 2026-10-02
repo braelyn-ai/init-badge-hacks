@@ -48,7 +48,7 @@ def main():
 
     try:
         report["before"] = device.status()
-        assert report["before"]["build"] == "conference-factory-3"
+        assert report["before"]["build"] == "v" + (ROOT / "firmware/factory_badge/version.txt").read_text().strip()
         assert not report["before"]["setup"] and report["before"]["clock_valid"]
         offset = clock("clock_status")["offset_minutes"]
         day = (int(time.time()) + offset * 60) // 86400 * 86400

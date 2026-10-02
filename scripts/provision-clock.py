@@ -8,6 +8,7 @@ profile, photo, credentials, or compile-time date is added to the artifact.
 import argparse
 import datetime as dt
 import json
+from pathlib import Path
 import os
 import secrets
 import select
@@ -16,7 +17,8 @@ import time
 
 MIN_EPOCH = 1704067200
 MAX_EPOCH = 4102444800
-EXPECTED_BUILD = "conference-factory-3"
+RELEASE_VERSION = (Path(__file__).resolve().parents[1] / "firmware/factory_badge/version.txt").read_text().strip()
+EXPECTED_BUILD = f"v{RELEASE_VERSION}"
 
 
 class ClockError(Exception):
@@ -205,13 +207,17 @@ def provision(port, timeout=30, offset=None, now=time.time, monotonic=time.monot
 
 
 def main():
+    global EXPECTED_BUILD
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("port", help="Live /dev/cu.usbmodem… or /dev/ttyACM… port")
     parser.add_argument("--offset-minutes", type=int, help="Event UTC offset; defaults to computer's current local offset")
     parser.add_argument("--timeout", type=float, default=30, help="Maximum wait for clock_set acknowledgment (default 30 seconds)")
     parser.add_argument("--initialize-profile-storage", action="store_true",
                         help="DESTRUCTIVE opt-in for blank/factory units: when profile storage is unavailable, erase and format ONLY ffat. All existing filesystem data is lost; NVS is retained")
+    parser.add_argument("--expected-build", default=EXPECTED_BUILD,
+                        help=f"Build ID the unit must report (default {EXPECTED_BUILD}, from version.txt; a release's post_flash.expected_build)")
     args = parser.parse_args()
+    EXPECTED_BUILD = args.expected_build
     if args.timeout <= 0 or args.timeout > 120:
         parser.error("--timeout must be greater than zero and at most 120")
     if args.offset_minutes is not None and not -840 <= args.offset_minutes <= 840:

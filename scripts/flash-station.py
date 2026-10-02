@@ -44,12 +44,37 @@ def now():
     return dt.datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def load_release_verifier():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("package_web_release", REPO_ROOT / "scripts/package-web-release.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.verify_release
+
+
 class Artifacts:
-    def __init__(self, directory, workdir):
-        directory = Path(directory)
-        self.boot = directory / "devices_badge.ino.bootloader.bin"
-        self.app = directory / "devices_badge.ino.bin"
-        table = (directory / "devices_badge.ino.partitions.bin").read_bytes()
+    """Either a packaged release (preferred: verified release.json, its exact
+    files and expected build) or a raw build output directory."""
+
+    def __init__(self, directory, workdir, release=None):
+        self.expected_build = None
+        if release:
+            release = Path(release)
+            try:
+                manifest = load_release_verifier()(release)
+            except RuntimeError as error:
+                raise SystemExit(f"Release {release} failed verification: {error}")
+            files = {entry["name"]: release / entry["path"] for entry in manifest["artifacts"]}
+            self.boot, self.app = files["bootloader"], files["firmware"]
+            table = files["partition-table"].read_bytes()
+            self.expected_build = manifest["flash"]["post_flash"]["expected_build"]
+            self.build_id = manifest["build_id"]
+        else:
+            directory = Path(directory)
+            self.boot = directory / "devices_badge.ino.bootloader.bin"
+            self.app = directory / "devices_badge.ino.bin"
+            table = (directory / "devices_badge.ino.partitions.bin").read_bytes()
+            self.build_id = None
         if parse_table(table) != EXPECTED_PARTITIONS:
             raise SystemExit("Compiled partition table is not the established conference layout")
         sector = table.ljust(SECTOR_BYTES, b"\xff")
@@ -96,7 +121,7 @@ class Station:
         self.root = REPO_ROOT / ".build" / "station"
         (self.root / "logs").mkdir(parents=True, exist_ok=True)
         self.workdir = Path(tempfile.mkdtemp(prefix="artifacts-", dir=self.root))
-        self.artifacts = Artifacts(args.artifact_dir, self.workdir)
+        self.artifacts = Artifacts(args.artifact_dir, self.workdir, args.release)
         self.ledger = Ledger(self.root / "ledger.jsonl")
         self.slots = threading.Semaphore(args.max_parallel)
         self.print_lock = threading.Lock()
@@ -132,6 +157,8 @@ class Station:
     def provision(self, log, port):
         command = [sys.executable, str(REPO_ROOT / "scripts/provision-clock.py"), port,
                    "--timeout", "60", "--initialize-profile-storage"]
+        if self.artifacts.expected_build:
+            command += ["--expected-build", self.artifacts.expected_build]
         if self.args.offset_minutes is not None:
             command += ["--offset-minutes", str(self.args.offset_minutes)]
         log.write(f"\n$ {' '.join(command)}\n".encode())
@@ -235,6 +262,8 @@ class Station:
         ignored = set(self.args.ignore_port)
         print(f"Station watching {self.args.port_glob}  (max {self.args.max_parallel} at once)"
               f"{'  DRY RUN - no writes' if self.args.dry_run else ''}")
+        if self.artifacts.build_id:
+            print(f"  release {self.artifacts.build_id} (verified release.json)")
         print(f"  build app sha256 {self.artifacts.app_sha256}")
         print(f"  bootloader sha256 {self.artifacts.boot_sha256}")
         offset = self.args.offset_minutes
@@ -261,8 +290,10 @@ class Station:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--release", type=Path, metavar="DIR",
+                        help="Packaged release (release.json + bins), verified before any write; use this for the batch")
     parser.add_argument("--artifact-dir", type=Path, default=REPO_ROOT / ".build/firmware",
-                        help="Frozen build output (default .build/firmware)")
+                        help="Raw build output when --release is not given (default .build/firmware)")
     parser.add_argument("--esptool", type=Path, default=DEFAULT_ESPTOOL)
     parser.add_argument("--port-glob", default="/dev/cu.usbmodem*" if sys.platform == "darwin" else "/dev/ttyACM*")
     parser.add_argument("--ignore-port", action="append", default=[], help="Never probe this port (repeatable)")

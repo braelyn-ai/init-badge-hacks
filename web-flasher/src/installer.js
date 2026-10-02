@@ -6,7 +6,8 @@ import { sha256, verifiedRead, verifySecurity, verifyBootSelector, validateArtif
 import { inspectFactorySource, createFactoryPlan, backupFactoryFlash, saveFactoryBackup,
   revalidateFactoryBeforeWrite, verifyFactoryAfterWrite } from "./factory.js";
 
-const BUILD = "conference-factory-3";
+// Keep equal to firmware/factory_badge/version.txt ("v" + version); test/release-version.test.js checks it.
+const BUILD = "v1.0.0";
 const RELEASE = `/stopwatch/install/releases/${BUILD}/`;
 const $ = id => document.getElementById(id);
 const supported = window.isSecureContext && "serial" in navigator && window.top === window.self;

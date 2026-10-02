@@ -52,7 +52,7 @@ function fixture() {
     { address: 0x10000, data: new Uint8Array(0x8001).fill(0xa5) },
   ];
   const release = {
-    schema_version: 1, build_id: "conference-factory-3",
+    schema_version: 1, build_id: "v1.0.0",
     hardware: { chip: "esp32s3", flash_bytes: FLASH_BYTES, psram_bytes: 8388608 },
     flash: { erase_all: false, requires_partition_match: true },
     partition_table: { offset: 0x8000, sector_size: 4096, padding_byte: 255,
