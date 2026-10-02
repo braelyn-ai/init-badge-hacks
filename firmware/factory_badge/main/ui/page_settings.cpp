@@ -106,7 +106,7 @@ public:
         }
     }
 private:
-    static constexpr int ActionTop = 354, ActionHeight = 46, RowHeight = 52, RowGap = 12;
+    static constexpr int ActionTop = 354, ActionHeight = 46, RowHeight = 52, RowGap = 9;
     void page_changed() {
         auto* current = lv_menu_get_cur_main_page(menu_);
         const bool submenu = current && current != home_;
