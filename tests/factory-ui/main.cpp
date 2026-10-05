@@ -933,7 +933,7 @@ int main(int argc, char** argv) {
     // A new session updates existing widgets without moving the attendee's
     // chosen scroll position or changing row heights.
     model.clock_text = "11:02 AM";
-    model.schedule_minute = 11 * 60 + 2;
+    model.schedule_minute = 10 * 60 + 32;
     model.schedule_current = badge_schedule::current(model.schedule_minute);
     badge::ui_update(model);
     spin();

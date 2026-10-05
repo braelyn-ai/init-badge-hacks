@@ -222,18 +222,18 @@ local setup used from Badge. Setup launched from Settings returns to Settings
 after Save, Cancel or timeout; successful setup launched elsewhere retains the
 prior return to Badge, and cancellation leaves its launch page selected.
 
-The active agenda is `firmware/factory_badge/main/schedule.h`, sourced from
-[workos.com/init](https://workos.com/init) on September 17, 2026. Its nine blocks
-start at 8:00 AM, 9:30 AM, 11:00 AM, 11:30 AM, 12:30 PM, 1:30 PM, 3:00 PM,
-3:30 PM and 5:00 PM. Only the keynote currently has an assigned speaker;
-unannounced program speakers stay TBA rather than being inferred from the
-separate speaker list.
+The active agenda is `firmware/factory_badge/main/schedule.h`, from the
+run-of-show blocks confirmed on October 5, 2026 (v1.1.0), replacing the
+September 17 [workos.com/init](https://workos.com/init) agenda. Its nine blocks
+start at 8:00 AM, 9:30 AM, 10:30 AM, 11:00 AM, 12:30 PM, 1:45 PM, 3:00 PM,
+3:30 PM and 4:30 PM. They are broad blocks only; individual sessions and
+speakers are intentionally not listed.
 
 At the user's request, the agenda intentionally repeats **every day** instead
 of being restricted to October 7. Current local minute is calculated from UTC
 plus the same saved offset as the badge clock. Starts are inclusive; the next
 start ends each block. The final Happy hour block stays current until midnight
-because no end time is published; its detail says `End time not listed`.
+because the agenda uses starts only.
 Before 8:00 AM every block is upcoming. Midnight resets all rows to upcoming.
 An invalid clock selects no current/passed rows.
 

@@ -172,7 +172,7 @@ classification checks. The factory-unit path has **not** yet run on hardware.
 Qualify it on a few units from the delivered batch before running the full batch.
 
 ```sh
-python3 scripts/flash-station.py --release .build/web-release/releases/v1.0.0
+python3 scripts/flash-station.py --release .build/web-release/releases/v1.1.0
 ```
 
 `--release` verifies the packaged `release.json` (sizes, SHA-256, partition

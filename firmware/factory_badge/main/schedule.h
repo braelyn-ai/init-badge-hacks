@@ -3,10 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 
-// Published agenda: https://workos.com/init, checked September 17, 2026.
-// Times intentionally repeat daily in the badge's configured local timezone.
-// The site lists starts only: each block runs until the next start, with the
-// final block remaining current until midnight (its actual end is unpublished).
+// Confirmed run-of-show blocks, October 5, 2026 (replaces the September 17
+// workos.com/init agenda). Times intentionally repeat daily in the badge's
+// configured local timezone. Only starts are used: each block runs until the
+// next start, with the final block remaining current until midnight.
 namespace badge_schedule {
 struct Item {
     int minute;
@@ -17,13 +17,13 @@ struct Item {
 inline constexpr std::array<Item, 9> Items{{
     {8 * 60, "8:00 AM", "Check-in and breakfast", ""},
     {9 * 60 + 30, "9:30 AM", "Opening keynote", "Michael Grinich / WorkOS"},
-    {11 * 60, "11:00 AM", "Networking break and sponsors", ""},
-    {11 * 60 + 30, "11:30 AM", "Morning program (continued)", "Speakers TBA"},
+    {10 * 60 + 30, "10:30 AM", "Networking break and sponsors", ""},
+    {11 * 60, "11:00 AM", "Morning program", "Speakers TBA"},
     {12 * 60 + 30, "12:30 PM", "Lunch and networking", ""},
-    {13 * 60 + 30, "1:30 PM", "Afternoon program", "Speakers TBA"},
+    {13 * 60 + 45, "1:45 PM", "Afternoon program", "Speakers TBA"},
     {15 * 60, "3:00 PM", "Networking break and sponsors", ""},
     {15 * 60 + 30, "3:30 PM", "Afternoon program (continued)", "Speakers TBA"},
-    {17 * 60, "5:00 PM", "Happy hour", "End time not listed"},
+    {16 * 60 + 30, "4:30 PM", "Happy hour", "End time not listed"},
 }};
 
 enum class State { Unknown, Upcoming, OnNow, Passed };

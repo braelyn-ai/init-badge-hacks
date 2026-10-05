@@ -7,9 +7,9 @@ assets, never Git source files or copies of a device's flash. The first alpha is
 
 ## Versioned releases (from v1.0.0)
 
-Releases use semantic versions. `firmware/factory_badge/version.txt` (`1.0.0`)
+Releases use semantic versions. `firmware/factory_badge/version.txt` (now `1.1.0`)
 is the single source: ESP-IDF stamps it into the app descriptor, the firmware
-reports `v1.0.0` as its readiness build ID, `provision-clock.py`,
+reports `vX.Y.Z` as its readiness build ID, `provision-clock.py`,
 `verify-factory.py` and the packager read it, and the web installer pins the
 same value (checked by `web-flasher/test/release-version.test.js`). Bump it for
 every release (`1.0.1` fixes, `1.1.0` features).

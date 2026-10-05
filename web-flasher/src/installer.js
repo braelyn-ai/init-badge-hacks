@@ -7,7 +7,7 @@ import { inspectFactorySource, createFactoryPlan, backupFactoryFlash, saveFactor
   revalidateFactoryBeforeWrite, verifyFactoryAfterWrite } from "./factory.js";
 
 // Keep equal to firmware/factory_badge/version.txt ("v" + version); test/release-version.test.js checks it.
-const BUILD = "v1.0.0";
+const BUILD = "v1.1.0";
 const RELEASE = `/stopwatch/install/releases/${BUILD}/`;
 const $ = id => document.getElementById(id);
 const supported = window.isSecureContext && "serial" in navigator && window.top === window.self;

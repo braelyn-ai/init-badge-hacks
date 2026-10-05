@@ -6,7 +6,7 @@
 
 int main() {
     using namespace badge_schedule;
-    constexpr int starts[] = {480, 570, 660, 690, 750, 810, 900, 930, 1020};
+    constexpr int starts[] = {480, 570, 630, 660, 750, 825, 900, 930, 990};
     assert(Items.size() == 9);
     assert(current(-1) == -1 && current(0) == -1 && current(479) == -1);
     assert(current(1440) == -1);
@@ -49,7 +49,7 @@ int main() {
     assert(localMinute(midnight + 4 * 3600, 330, true) == 570);
     assert(localMinute(midnight + 30 * 60, 60, true) == 90);
     assert(localMinute(midnight + 4 * 3600 + 30 * 60, -420, true) == 1290);
-    assert(current(localMinute(midnight + 18 * 3600, -420, true)) == 2);
+    assert(current(localMinute(midnight + 18 * 3600, -420, true)) == 3);
     assert(current(localMinute(midnight + 18 * 3600, -480, true)) == 1);
     // Same local times repeat on different dates, including the year boundary.
     for (int day : {0, 1, 31, 365, 366, 730})

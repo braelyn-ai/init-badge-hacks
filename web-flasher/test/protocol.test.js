@@ -6,7 +6,7 @@ import {
   safeDiagnostics, ClockConnection,
 } from "../src/protocol.js";
 
-const BUILD = "v1.0.0";
+const BUILD = "v1.1.0";
 const NOW = 1893456000;
 const clock = (epoch = NOW, offset = -480) => ({ protocol: 1, ok: true, valid: true, source: "computer", epoch, rtc_epoch: epoch, offset_minutes: offset });
 const ready = () => ({ build: BUILD, framework: "factory", board: 30, flash_bytes: 16777216, psram_bytes: 8388608, store_ready: true, clock_valid: true, rtc: true, setup: false, wifi_mode: 0, bluetooth: 0 });

@@ -54,9 +54,9 @@ def main():
         day = (int(time.time()) + offset * 60) // 86400 * 86400
         cases = [
             ("before-start", 479, -1, 0), ("check-in", 480, 0, 0),
-            ("keynote", 570, 1, 0), ("break", 660, 2, 0),
-            ("lunch", 750, 4, 0), ("afternoon", 810, 5, 0),
-            ("happy-hour", 1020, 8, 0), ("late", 1439, 8, 0),
+            ("keynote", 570, 1, 0), ("break", 630, 2, 0),
+            ("lunch", 750, 4, 0), ("afternoon", 825, 5, 0),
+            ("happy-hour", 990, 8, 0), ("late", 1439, 8, 0),
             ("midnight", 0, -1, 1), ("next-day-keynote", 570, 1, 1),
         ]
         for name, minute, expected, days in cases:
