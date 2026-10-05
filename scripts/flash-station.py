@@ -4,8 +4,11 @@
 Plug units in; each one is probed, classified by its exact partition sector and
 handled without prompts. Factory units get the reviewed first-install plan
 (no per-unit backup), then clock/storage provisioning and the UNIT_READY check.
-Conference badges running this exact build are only re-provisioned. Anything
-else (another build, unknown layout, not a StopWatch) is left untouched.
+Conference badges on an older build with a recognized app0 boot selector get a
+preservation update (bootloader + app only; settings, profile and storage kept),
+then the same readiness check without storage initialization. Conference badges
+running this exact build are only re-provisioned. Anything else (unknown layout
+or boot selector, not a StopWatch) is left untouched.
 
 The ledger and per-unit logs stay private in .build/station/; they contain
 hardware identifiers. Run one station process per computer.
@@ -37,6 +40,25 @@ FACTORY_SECTOR_SHA256 = "551de813efa412911f6d15afef5c0cdb9b3c2d9d8dece864280fa39
 TARGET_SECTOR_SHA256 = "0bcf1787e46f4bf1ce9ad28bd22c2257e715987e913add5008c0265d3feb2fcd"
 SETTINGS_RANGE = (0x9000, 0x7000)     # factory NVS/OTA data; erased OTA data selects app0
 UNUSED_RANGE = (0x310000, 0xCF0000)   # app1, ffat and coredump
+OTADATA_RANGE = (0xE000, 0x2000)
+
+
+def app0_selectors():
+    """SHA-256s of otadata states that boot app0, matching web-flasher guards.js:
+    erased, the pinned IDF first-boot selector, and Arduino-ESP32 3.3.10
+    boot_app0.bin. Any other state (e.g. app1 selected) is never updated."""
+    erased = bytearray(b"\xff" * OTADATA_RANGE[1])
+    idf = bytearray(erased)
+    idf[0:4] = (1).to_bytes(4, "little")
+    idf[24:28] = (2).to_bytes(4, "little")
+    idf[28:32] = (0x4743989A).to_bytes(4, "little")
+    arduino = bytearray(idf)
+    arduino[24:28] = (0xFFFFFFFF).to_bytes(4, "little")
+    arduino[4096:4100] = (0).to_bytes(4, "little")
+    return {hashlib.sha256(bytes(state)).hexdigest() for state in (erased, idf, arduino)}
+
+
+APP0_SELECTOR_SHA256 = app0_selectors()
 MAC_PATTERN = re.compile(rb"MAC:\s*((?:[0-9a-f]{2}:){5}[0-9a-f]{2})", re.I)
 
 
@@ -154,9 +176,11 @@ class Station:
         log.write(output)
         return result.returncode, output
 
-    def provision(self, log, port):
-        command = [sys.executable, str(REPO_ROOT / "scripts/provision-clock.py"), port,
-                   "--timeout", "60", "--initialize-profile-storage"]
+    def provision(self, log, port, initialize_storage=True):
+        command = [sys.executable, str(REPO_ROOT / "scripts/provision-clock.py"), port, "--timeout", "60"]
+        # Updates keep existing storage: unavailable storage fails rather than formats.
+        if initialize_storage:
+            command.append("--initialize-profile-storage")
         if self.artifacts.expected_build:
             command += ["--expected-build", self.artifacts.expected_build]
         if self.args.offset_minutes is not None:
@@ -173,7 +197,7 @@ class Station:
         return False, reason[-1] if reason else "readiness check failed"
 
     # -- per-unit flow ----------------------------------------------------
-    def classify(self, sector, mac, app_matches):
+    def classify(self, sector, mac, app_matches, selector=None):
         digest = hashlib.sha256(sector).hexdigest()
         if digest == FACTORY_SECTOR_SHA256:
             return "install", "factory layout"
@@ -183,7 +207,9 @@ class Station:
             return "provision", "already running this build"
         if self.ledger.get(mac) in ("install_started", "install_failed"):
             return "install", "resuming interrupted install"
-        return "skip", "conference badge with a different build - not touched"
+        if selector is not None and hashlib.sha256(selector).hexdigest() in APP0_SELECTOR_SHA256:
+            return "update", "conference badge on an older build"
+        return "skip", "conference badge with an unrecognized boot selection - not touched"
 
     def handle(self, port):
         with self.slots:
@@ -212,12 +238,19 @@ class Station:
             return "failed", "no ESP32-S3 bootloader response (check cable/hub; unplug and replug)"
         mac = match.group(1).decode().lower()
         sector = sector_path.read_bytes()
-        app_matches = False
+        app_matches, selector = False, None
         if hashlib.sha256(sector).hexdigest() == TARGET_SECTOR_SHA256:
             code, _ = self.esptool(log, port, "verify-flash", "0x10000", str(self.artifacts.app),
                                    after="no-reset", timeout=120)
             app_matches = code == 0
-        action, reason = self.classify(sector, mac, app_matches)
+            if not app_matches:
+                selector_path = self.workdir / f"otadata-{Path(port).name}.bin"
+                selector_path.unlink(missing_ok=True)
+                code, _ = self.esptool(log, port, "read-flash", hex(OTADATA_RANGE[0]), hex(OTADATA_RANGE[1]),
+                                       str(selector_path), after="no-reset", timeout=60)
+                if code == 0 and selector_path.is_file():
+                    selector = selector_path.read_bytes()
+        action, reason = self.classify(sector, mac, app_matches, selector)
         if self.args.dry_run:
             self.esptool(log, port, "chip-id", timeout=30)  # hard reset back to its own app
             return "skipped", f"dry run: would {action} ({reason})"
@@ -244,13 +277,28 @@ class Station:
                 self.ledger.record(mac, "install_failed", stage="flash")
                 return "failed", "flash write failed - replug to retry"
             self.say(port, "flashed; setting clock and preparing storage")
+        elif action == "update":
+            self.say(port, f"updating ({reason}); saved settings and storage are kept")
+            self.ledger.record(mac, "update_started", app_sha256=self.artifacts.app_sha256)
+            # Same write set as the browser update: the partition sector already
+            # matches, and NVS, otadata, app1, ffat and coredump are not written.
+            code, _ = self.esptool(
+                log, port, "write-flash", "--flash-mode", "keep", "--flash-freq", "keep",
+                "--flash-size", "keep",
+                "0x0", str(self.artifacts.boot),
+                "0x10000", str(self.artifacts.app),
+                timeout=600)
+            if code:
+                self.ledger.record(mac, "update_failed", stage="flash")
+                return "failed", "update write failed - replug to retry"
+            self.say(port, "updated; setting clock and checking storage")
         else:
             self.say(port, "provisioning clock (no flash write)")
             self.esptool(log, port, "chip-id", timeout=30)  # boot the installed app
-        ok, why = self.provision(log, port)
+        ok, why = self.provision(log, port, initialize_storage=action != "update")
         if not ok:
-            self.ledger.record(mac, "install_failed" if action == "install" else "provision_failed",
-                               stage="provision")
+            failed = {"install": "install_failed", "update": "update_failed"}.get(action, "provision_failed")
+            self.ledger.record(mac, failed, stage="provision")
             return "failed", f"{why} - replug to retry"
         self.ledger.record(mac, "ready", app_sha256=self.artifacts.app_sha256)
         return "ready", "badge ready - unplug"

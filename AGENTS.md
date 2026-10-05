@@ -164,8 +164,10 @@
   Every flash must first compare the current partition sector with the compiled
   map. Factory/different layouts require a separately authorized migration.
   The October 2026 batch authorized `scripts/flash-station.py`: unattended
-  conversion of the exact recognized factory sector only, no per-unit backup;
-  other layouts/builds are never written. See conference-clock.md.
+  conversion of the exact recognized factory sector only, no per-unit backup.
+  Since v1.2.0 it also preservation-updates target-layout badges on an older
+  build with a recognized app0 selector (bootloader + app0 only, no storage
+  init). Other layouts/selectors are never written. See conference-clock.md.
   Explicit filesystem initialization applies only to the verified existing map
   and erases ONLY `ffat`; never run it on the provisioned development board or add
   automatic format-on-error.

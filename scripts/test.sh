@@ -43,6 +43,7 @@ bash "$REPO_ROOT/tests/conference-profile-host/run.sh"
 python3 "$REPO_ROOT/tests/test_provision_clock.py"
 python3 "$REPO_ROOT/tests/check_flash_layout.py"
 python3 "$REPO_ROOT/tests/test_flash_clock.py"
+python3 "$REPO_ROOT/tests/test_flash_station.py"
 python3 "$REPO_ROOT/tests/test_verify_factory.py"
 
 # Current native factory-stack application. These compile the production code

@@ -156,10 +156,21 @@ as [web-flasher/src/factory.js](../web-flasher/src/factory.js):
 | Recognized factory sector | Erase app1/ffat/coredump, write bootloader, target sector, blank settings, app0; then provision |
 | Target sector, app0 equals this build | Provision only (clock; storage init only when not ready) |
 | Target sector, other app, ledger says install started | Resume the full install |
-| Target sector, other app (e.g. the development badge) | Skip, no write |
+| Target sector, other app, app0 boot selector recognized | Preservation update: write bootloader + app0 only, then provision **without** storage initialization |
+| Target sector, other app, any other boot selector | Skip, no write |
 | Anything else | Skip, no write |
 
-Provisioning is `provision-clock.py --initialize-profile-storage`; only
+October 5, 2026 (v1.2.0): the user authorized updating already-converted badges
+on an older build, so one unattended station can bring every plugged-in badge to
+the release. The update uses the browser installer's write set and accepted app0
+selectors (erased, IDF first boot, Arduino `boot_app0.bin`); the partition
+sector, NVS, otadata, app1, ffat and coredump are not written, and unavailable
+storage fails the unit instead of being formatted. Verified on the development
+badge: v1.1.0 → v1.2.0 READY in 68 s with brightness, orientation, touch
+calibration and storage preserved (`storage_initialized: false`). Host checks:
+`tests/test_flash_station.py`.
+
+Installs and re-provisioning use `provision-clock.py --initialize-profile-storage`; only
 `UNIT_READY` counts as ready. Probing resets every attached board, so keep the
 development badge unplugged or pass `--ignore-port`. A MAC-keyed ledger and
 per-unit logs are written to `.build/station/` (private: they hold hardware IDs).
