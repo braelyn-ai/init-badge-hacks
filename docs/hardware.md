@@ -128,6 +128,11 @@ The historical connected application's interaction contract was:
 the second pusher to join a chord. A single action commits on release or after
 that interval, then both buttons must be released before another action. This
 sits above M5Unified's normal button debouncing (10 ms in version 0.2.19).
+In the factory firmware (v1.2.0+), `board_buttons.h` samples both pushers on a
+5 ms `esp_timer` with the same 10 ms debounce and latches any press until the main
+loop reads it. The loop can take ~172 ms per pass while init() plays its GIF
+(measured October 5, 2026; ~6 ms on other pages), so per-loop sampling alone
+required a ~170-350 ms hold there and dropped quick taps.
 
 Touch dispatch in
 [`devices_badge.ino`](../firmware/devices_badge/devices_badge.ino) uses

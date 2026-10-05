@@ -877,6 +877,14 @@ downloads the account's photo after setup when the badge has none or the
 account changed, and a changed account first clears the old photo. Unrecognized
 Other links stay QR-only.
 
+### October 5 pusher sampling (v1.2.0)
+
+Quick pusher taps were ignored on init(): its native GIF playback makes each
+main-loop pass ~172 ms (vs ~6 ms on other pages, measured on the development
+badge), and pushers were sampled once per pass. A 5 ms timer now samples and
+latches them (`board_buttons.h`, see hardware.md); gesture rules are unchanged.
+Host check: `tests/check_button_latch.cpp`. Touch is still read once per loop.
+
 ### October 1 pusher shortcut and Advanced settings
 
 Holding both pushers for 500 ms opens Settings at its home menu from any page

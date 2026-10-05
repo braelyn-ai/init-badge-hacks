@@ -10,6 +10,7 @@
 #include "board_flush.h"
 #include "neutral_gray.h"
 #include "board_vibration.h"
+#include "board_buttons.h"
 #include "vendor/cst820/cst820.h"
 #include "vendor/rx8130/rx8130.h"
 
@@ -271,16 +272,15 @@ void pollTouch(uint32_t now) {
     rotateObservation();
 }
 
-struct Debouncer {
-    bool candidate = false, stable = false;
-    uint32_t changedAt = 0;
-    bool update(bool raw, uint32_t now) {
-        if (candidate != raw) { candidate = raw; changedAt = now; }
-        if (uint32_t(now - changedAt) >= 10) stable = candidate;
-        return stable;
-    }
-};
-Debouncer yellowButton, blueButton;
+ButtonLatch buttonLatch;
+esp_timer_handle_t buttonTimer = nullptr;
+constexpr uint64_t ButtonSampleUs = 5000;
+
+// Runs on the esp_timer task: two GPIO reads and an atomic latch, nothing else.
+void sampleButtons(void*) {
+    buttonLatch.sample(gpio_get_level(GPIO_NUM_2) == 0, gpio_get_level(GPIO_NUM_1) == 0,
+                       uint32_t(esp_timer_get_time() / 1000));
+}
 
 void pollBattery(uint32_t now) {
     if (sampledBatteryOnce && uint32_t(now - lastBatteryPoll) < 1000) return;
@@ -347,6 +347,14 @@ bool init() {
         gpio_set_direction(pin, GPIO_MODE_INPUT);
         gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
     }
+    const esp_timer_create_args_t buttonArgs{.callback = sampleButtons, .arg = nullptr,
+        .dispatch_method = ESP_TIMER_TASK, .name = "buttons", .skip_unhandled_events = true};
+    if (esp_timer_create(&buttonArgs, &buttonTimer) != ESP_OK ||
+        esp_timer_start_periodic(buttonTimer, ButtonSampleUs) != ESP_OK) {
+        if (buttonTimer) esp_timer_delete(buttonTimer);
+        buttonTimer = nullptr;
+        ESP_LOGW(Tag, "Button timer unavailable; sampling once per loop");
+    }
     setBrightness(brightnessValue);
     initialized = true;
     poll();
@@ -358,8 +366,10 @@ void poll() {
     const uint32_t now = millis();
     pollTouch(now);
     inputVibration.poll(touchSample.valid && touchSample.pressed, inputMotor, millis());
-    buttonState.yellow = yellowButton.update(gpio_get_level(GPIO_NUM_2) == 0, now);
-    buttonState.blue = blueButton.update(gpio_get_level(GPIO_NUM_1) == 0, now);
+    if (!buttonTimer) sampleButtons(nullptr);
+    const uint8_t held = buttonLatch.take();
+    buttonState.yellow = held & ButtonLatch::Yellow;
+    buttonState.blue = held & ButtonLatch::Blue;
     pollImu(now);
     pollBattery(now);
 }

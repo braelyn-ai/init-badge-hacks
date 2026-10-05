@@ -13,7 +13,7 @@ if [[ "$(uname -s)" != Darwin ]]; then
 fi
 mkdir -p "$REPO_ROOT/.build/tests"
 FLAGS=(-std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer)
-for name in account_paging badge_styles button_gesture orientation_filter profile_urls voice_reply_state conference_navigation conference_settings daily_schedule schedule_bookmarks morse_unlock after_dark_unlock touch_observation; do
+for name in account_paging badge_styles button_gesture button_latch orientation_filter profile_urls voice_reply_state conference_navigation conference_settings daily_schedule schedule_bookmarks morse_unlock after_dark_unlock touch_observation; do
   "$CXX" "${FLAGS[@]}" "$REPO_ROOT/tests/check_$name.cpp" -o "$REPO_ROOT/.build/tests/$name"
   "$REPO_ROOT/.build/tests/$name"
 done

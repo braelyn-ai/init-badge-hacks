@@ -26,7 +26,7 @@ const bundled = await build({
   } }],
 });
 const code = bundled.outputFiles[0].text;
-const BUILD = "v1.1.0";
+const BUILD = "v1.2.0";
 const PRIVATE = "PRIVATE_FACTORY_PROFILE_WIFI_PASSWORD";
 const bytes = new TextEncoder().encode(PRIVATE);
 const ready = { build: BUILD, framework: "factory", board: 30, flash_bytes: 16777216, psram_bytes: 8388608,
