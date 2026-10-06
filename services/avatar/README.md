@@ -27,7 +27,11 @@ Delete the Worker and the `avatar.chan.dev` custom domain when the event ends.
   venue's public IP. Cached hits are unlimited.
 - Invocation logs are off; errors log the network and status, never the handle.
 - X, LinkedIn and Threads photos come from unavatar's unofficial sources and may
-  stop working; the badge falls back to manual upload.
+  stop working.
+- unavatar sees profiles as a signed-out visitor. A LinkedIn photo limited to
+  members comes back as LinkedIn's silhouette (a 200 SVG); the relay answers
+  `404 photo_not_public` with how to fix it (badges show "No public photo
+  found"). Real misses are `404 no_photo`.
 
 ## Commands
 

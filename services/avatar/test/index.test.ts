@@ -95,7 +95,7 @@ describe('fetch', () => {
     vi.stubGlobal('fetch', async () => new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', { headers: { 'Content-Type': 'image/svg+xml' } }));
     const silhouette = await get('/v1/linkedin/private-photo');
     expect(silhouette.status).toBe(404);
-    expect(await silhouette.json()).toMatchObject({ error: 'no_photo' });
+    expect(await silhouette.json()).toMatchObject({ error: 'photo_not_public', message: expect.stringContaining('visibility to Public') });
     vi.stubGlobal('fetch', async () => new Response('<html>', { headers: { 'Content-Type': 'text/html' } }));
     expect((await get('/v1/x/nobody')).status).toBe(502);
     vi.stubGlobal('fetch', async () => new Response('{"code":"EAPIKEY"}', { status: 401 }));

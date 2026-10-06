@@ -76,9 +76,16 @@ export default {
     // A vector image is a provider's default silhouette (LinkedIn serves one
     // when a profile photo isn't public), never a real photo; Images cannot
     // rasterize it either. Report it as no photo rather than a failure.
-    if (source.status === 404 || (source.headers.get('Content-Type') ?? '').startsWith('image/svg')) {
+    // Both answer 404, which badges show as "No public photo found".
+    if (source.status === 404) {
       void source.body?.cancel();
       return json(404, 'no_photo', 'No public photo was found for that account.');
+    }
+    if ((source.headers.get('Content-Type') ?? '').startsWith('image/svg')) {
+      void source.body?.cancel();
+      return json(404, 'photo_not_public', target.network === 'linkedin'
+        ? "This LinkedIn photo isn't public. On LinkedIn, set the profile photo's visibility to Public (not only LinkedIn members), then save badge setup again."
+        : "This profile's photo isn't public. Make it visible to everyone, then save badge setup again.");
     }
     if (source.status === 401 || source.status === 403) {
       void source.body?.cancel();
