@@ -73,7 +73,10 @@ export default {
     } catch {
       return json(504, 'source_timeout', 'The photo service did not respond.');
     }
-    if (source.status === 404) {
+    // A vector image is a provider's default silhouette (LinkedIn serves one
+    // when a profile photo isn't public), never a real photo; Images cannot
+    // rasterize it either. Report it as no photo rather than a failure.
+    if (source.status === 404 || (source.headers.get('Content-Type') ?? '').startsWith('image/svg')) {
       void source.body?.cancel();
       return json(404, 'no_photo', 'No public photo was found for that account.');
     }
