@@ -30,10 +30,17 @@ bearing is decorative, because Wi-Fi gives no direction.
 Quick version, with the badge plugged in over a USB-C data cable:
 
 ```sh
+git clone https://github.com/braelyn-ai/init-badge-hacks && cd init-badge-hacks
 python3 -m venv .venv && .venv/bin/pip install esptool
 gh release download --repo braelyn-ai/init-badge-hacks --pattern conference_badge.bin
 .venv/bin/python scripts/hack-flash.py --image conference_badge.bin
 ```
+
+No `gh`? Download `conference_badge.bin` from the
+[latest release](https://github.com/braelyn-ai/init-badge-hacks/releases/latest)
+into that folder instead. Your badge must already run the WorkOS conference
+firmware (if it still shows the M5Stack demo, install that first at
+[workos.com/init/badge/install](https://workos.com/init/badge/install)).
 
 `scripts/hack-flash.py` writes only the app slot. It first checks the badge has
 the conference partition layout, backs up the app that is on it to `backups/`,
