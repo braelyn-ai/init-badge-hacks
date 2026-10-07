@@ -5,8 +5,10 @@
 
 namespace badge::ui {
 namespace {
-constexpr int Ox = hack::Cx, Oy = 200;       // Output shaft centre.
-constexpr float R = 104, E = 15;             // Rotor centre-to-apex, and shaft eccentricity.
+constexpr int Ox = hack::Cx, Oy = 186;       // Output shaft centre.
+constexpr float R = 98, E = 14;              // Rotor centre-to-apex, and shaft eccentricity.
+constexpr float Wall = 28;                   // Housing wall thickness.
+constexpr int Ring = 44;                     // Segments around the housing.
 constexpr float Tau = 6.2831853f;
 constexpr int Arc = 7, Flank = 6;            // Segments per chamber wall and per rotor flank.
 constexpr float Overlap = 0.012f;            // Radians; hides antialiased seams between fan slices.
@@ -48,41 +50,41 @@ lv_color_t chamber_color(float angle, float throttle) {
 class RotaryPage final : public PageView {
 public:
     RotaryPage(Context& context, lv_obj_t* parent) : PageView(context, parent) {
-        const int half_w = int(R - E) + 34, half_h = int(R + E) + 26;
-        // Intake (upper) and exhaust (lower) runners leave through the left wall.
-        runner(Ox - half_w - 30, Oy - 52, 0x3a3d43);
-        exhaust_ = runner(Ox - half_w - 30, Oy + 24, 0x3a3d43);
-        // The cast housing is a native rounded rectangle with a vertical sheen:
-        // cheap to repaint under the bore every frame.
-        auto* block = container(root_, Ox - half_w, Oy - half_h, 2 * half_w, 2 * half_h);
-        lv_obj_remove_flag(block, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_style_radius(block, 92, 0);
-        lv_obj_set_style_bg_color(block, lv_color_hex(0x8d929a), 0);
-        lv_obj_set_style_bg_grad_color(block, lv_color_hex(0x4a4e55), 0);
-        lv_obj_set_style_bg_grad_dir(block, LV_GRAD_DIR_VER, 0);
-        lv_obj_set_style_bg_opa(block, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(block, 3, 0);
-        lv_obj_set_style_border_color(block, lv_color_hex(0xb4bac2), 0);
-        // Tension bolts around the housing.
-        for (int i = 0; i < 12; ++i) {
-            const float a = (i + 0.5f) * Tau / 12;
-            const int x = Ox + int(std::cos(a) * (half_w - 13) * (1 + 0.10f * std::fabs(std::sin(2 * a))));
-            const int y = Oy + int(std::sin(a) * (half_h - 13) * (1 + 0.10f * std::fabs(std::sin(2 * a))));
-            hack::disc(root_, x, y, 13, lv_color_hex(0x2a2c31));
-            hack::disc(root_, x, y, 7, lv_color_hex(0x9da3ab));
+        // The housing is a ring that follows the bore, like the real casting:
+        // an even wall with coolant passages and bolt holes around it.
+        for (int i = 0; i <= Ring; ++i) {
+            const float t = i * Tau / Ring;
+            const float dx = -R * std::sin(t) + 3 * E * std::sin(3 * t), dy = R * std::cos(t) - 3 * E * std::cos(3 * t);
+            const float length = std::sqrt(dx * dx + dy * dy);
+            bore(t, inner_[i].x, inner_[i].y);
+            outer_[i] = {inner_[i].x + dy / length * Wall, inner_[i].y - dx / length * Wall};
         }
+        const int half_w = int(R - E + Wall) + 8, half_h = int(R + E + Wall) + 2;
+        // Mounting feet, a lifting lug, the exhaust stub and one stray stud.
+        rect(Ox - half_w - 6, Oy + half_h - 26, 74, 30, 6, 0x6b7078);
+        rect(Ox + half_w - 68, Oy + half_h - 26, 74, 30, 6, 0x6b7078);
+        rect(Ox - half_w - 14, Oy + half_h - 2, 2 * half_w + 28, 8, 3, 0x4a4e55);
+        hack::disc(root_, Ox - half_w + 12, Oy - half_h + 58, 34, lv_color_hex(0xb4b9c0));
+        hack::disc(root_, Ox - half_w + 12, Oy - half_h + 58, 14, lv_color_hex(0x17181b));
+        exhaust_ = rect(Ox - half_w - 16, Oy + 22, 40, 30, 6, 0x3a3d43);
+        rect(Ox + half_w - 12, Oy + 78, 34, 8, 2, 0x3a3d43);
+        // The bore behind the chambers: dark, so the gaps between the fan
+        // slices and the true curve do not show.
+        rect(Ox - int(R - E), Oy - int(R + E), 2 * int(R - E), 2 * int(R + E), int(R - E), Bore);
+        hack::surface(root_, Ox - half_w, Oy - half_h, 2 * half_w, 2 * half_h,
+                      [this](lv_layer_t* layer, const lv_area_t&) { paint_housing(layer); });
         // Two spark plugs: steel shell, ceramic, terminal.
         for (int i = 0; i < 2; ++i) {
-            const int y = Oy - 24 + i * 36;
-            rect(Ox + int(R - E) + 2, y, 16, 12, 2, 0x70757d);
-            rect(Ox + int(R - E) + 18, y + 2, 20, 8, 2, 0xe9e6dc);
-            rect(Ox + int(R - E) + 38, y + 4, 8, 4, 1, 0x9da3ab);
+            const int x = Ox + int(R - E + Wall) - 6, y = Oy - 24 + i * 36;
+            rect(x, y, 14, 12, 2, 0x70757d);
+            rect(x + 14, y + 2, 18, 8, 2, 0xe9e6dc);
+            rect(x + 32, y + 4, 8, 4, 1, 0x9da3ab);
         }
         const int box_w = int(R - E) + 3, box_h = int(R + E) + 3;
         engine_ = hack::surface(root_, Ox - box_w, Oy - box_h, 2 * box_w, 2 * box_h,
                                 [this](lv_layer_t* layer, const lv_area_t&) { paint(layer); });
-        rpm_ = label(root_, "", 134, 350, 200, &font_mono_24, cream());
-        throttle_text_ = label(root_, "", 134, 380, 200, &font_mono_18, muted());
+        rpm_ = label(root_, "", 134, 356, 200, &font_mono_24, cream());
+        throttle_text_ = label(root_, "", 134, 386, 200, &font_mono_18, muted());
         on_tap(root_, [this] { blip_until_ = lv_tick_get() + 900; });
     }
     void update() override {
@@ -118,11 +120,30 @@ private:
         lv_obj_set_style_bg_opa(object, LV_OPA_COVER, 0);
         return object;
     }
-    lv_obj_t* runner(int x, int y, uint32_t color) {
-        auto* pipe = rect(x, y, 60, 28, 6, color);
-        lv_obj_set_style_border_width(pipe, 2, 0);
-        lv_obj_set_style_border_color(pipe, lv_color_hex(0x8d929a), 0);
-        return pipe;
+    // Static, but it shares the screen area the engine repaints every frame,
+    // so each piece is skipped unless the region being drawn touches it.
+    void paint_housing(lv_layer_t* layer) {
+        const float top = Oy - (R + E + Wall), height = 2 * (R + E + Wall);
+        for (int i = 0; i < Ring; ++i) {
+            const Point &a = inner_[i], &b = inner_[i + 1], &c = outer_[i + 1], &d = outer_[i];
+            const float left = std::min({a.x, b.x, c.x, d.x}), right = std::max({a.x, b.x, c.x, d.x});
+            const float up = std::min({a.y, b.y, c.y, d.y}), down = std::max({a.y, b.y, c.y, d.y});
+            if (!hack::needs_paint(layer, int(left) - 2, int(up) - 2, int(right - left) + 5, int(down - up) + 5)) continue;
+            // Machined aluminium, brighter toward the top. Slices overlap a
+            // little along the ring so no seams show.
+            const lv_color_t metal = hack::mix(lv_color_hex(0xdfe2e6), lv_color_hex(0x8a8f97), ((a.y + c.y) / 2 - top) / height);
+            const float ix = (b.x - a.x) * 0.06f, iy = (b.y - a.y) * 0.06f; // Along the inner edge.
+            const float ox = (c.x - d.x) * 0.06f, oy = (c.y - d.y) * 0.06f; // Along the outer edge.
+            hack::fill_triangle(layer, a.x - ix, a.y - iy, b.x + ix, b.y + iy, c.x + ox, c.y + oy, metal);
+            hack::fill_triangle(layer, a.x - ix, a.y - iy, c.x + ox, c.y + oy, d.x - ox, d.y - oy, metal);
+        }
+        for (int i = 0; i < Ring; ++i) {
+            // Around the middle of the wall: bolt holes alternating with coolant passages.
+            const int x = int(std::lround((inner_[i].x + outer_[i].x) / 2)), y = int(std::lround((inner_[i].y + outer_[i].y) / 2));
+            if (!hack::needs_paint(layer, x - 8, y - 8, 17, 17)) continue;
+            if (i % 2) hack::fill_circle(layer, x, y, 6, lv_color_hex(0x5a5e65));
+            else { hack::fill_circle(layer, x, y, 5, lv_color_hex(0x9a9fa7)); hack::fill_circle(layer, x, y, 3, lv_color_hex(0x17181b)); }
+        }
     }
     void paint(lv_layer_t* layer) {
         // The rotor's centre rides the eccentric: three shaft turns per rotor turn.
@@ -181,6 +202,8 @@ private:
                           int(std::lround(Oy - 0.8f * E * std::sin(3 * rotor_))), 9, lv_color_hex(0x3a3d43));
         hack::fill_circle(layer, Ox, Oy, 4, lv_color_hex(0x121316));
     }
+    struct Point { float x, y; };
+    Point inner_[Ring + 1] = {}, outer_[Ring + 1] = {};
     lv_obj_t *engine_ = nullptr, *rpm_ = nullptr, *throttle_text_ = nullptr, *exhaust_ = nullptr;
     hack::FrameClock clock_{66};
     float rotor_ = 0, speed_ = Idle, throttle_ = 0;
