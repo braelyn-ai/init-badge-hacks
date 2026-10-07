@@ -130,6 +130,18 @@ void refreshModel() {
     model.schedule_current = badge_schedule::current(model.schedule_minute);
     afterDark.updateClock(badge_clock::epoch(), badge_clock::offset(), model.clock_valid, board::millis());
     model.after_dark_unlocked = afterDark.unlocked();
+    const auto radar = badge::radar_snapshot();
+    model.radar_scanning = radar.scanning;
+    if (model.radar_revision != radar.revision) {
+        model.radar_revision = radar.revision;
+        model.radar.clear();
+        for (const auto& heard : radar.contacts) {
+            badge::RadarContact contact;
+            std::copy(std::begin(heard.bssid), std::end(heard.bssid), contact.bssid.begin());
+            contact.rssi = heard.rssi;
+            model.radar.push_back(contact);
+        }
+    }
     badge::ui_update(model);
 }
 void status(const char* nonce) {
@@ -478,6 +490,21 @@ void pollReset() {
     }
     refreshModel();
 }
+// Eyes: the reading is the support force along the unrotated display's
+// right (native Y) and down (native X) axes; gravity is its opposite.
+void pollMotion() {
+    static uint32_t lastMotion = 0;
+    auto imu = board::acceleration();
+    if (!imu.valid || imu.sampledAtMs == lastMotion) return;
+    lastMotion = imu.sampledAtMs;
+    const float right = -imu.y, down = -imu.x;
+    switch (board::rotation()) {
+        case 1: badge::ui_motion(down, -right); break;
+        case 2: badge::ui_motion(-right, -down); break;
+        case 3: badge::ui_motion(-down, right); break;
+        default: badge::ui_motion(right, down); break;
+    }
+}
 void pollOrientation(uint32_t now) {
     if (badge::ui_touch_test_active() || badge::ui_reset_active()) return;
     bool touching = board::touch().pressed;
@@ -538,6 +565,7 @@ extern "C" void app_main() {
         if (bookmarks.toggle(index, board::millis())) refreshModel();
     };
     callbacks.reset_badge = requestReset;
+    callbacks.radar_scan = [] { badge::radar_scan_request(); };
     callbacks.unlock_after_dark = [] {
         if (afterDark.unlock(board::millis())) refreshModel();
     };
@@ -576,7 +604,7 @@ extern "C" void app_main() {
         if (badge::ui_touch_test_active() && contact.valid && contact.sequence &&
             (contact.pressed || badge::ui_touch_state().sample))
             badge::ui_touch_sample(contact.rawX, contact.rawY, contact.x, contact.y, contact.pressed, board::rotation(), contact.sensor);
-        pollOrientation(now); pollReset(); persist(now);
+        pollOrientation(now); pollMotion(); pollReset(); persist(now);
         auto portal = badge::portal_snapshot();
         if (setupRequested) {
             if (portal.active || portal.starting) badge::ui_show_setup(portal.ssid, portal.password, "192.168.4.1",

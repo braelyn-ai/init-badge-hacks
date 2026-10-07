@@ -52,6 +52,9 @@ std::string fetch_photo_handle, fetch_photo_provider, fetch_photo_provider_handl
 bool fetch_photo_from_profile = false;
 constexpr size_t kPhotoMaxBytes = 128 * 1024; // The decoder's JPEG limit.
 ProfileResetSnapshot reset_state; // Protected by portal_mutex with AP lifecycle.
+RadarSnapshot radar_state;        // Protected by portal_mutex.
+bool radar_pending = false;       // Protected by portal_mutex.
+constexpr uint16_t kRadarMax = 32;
 PhoneClockSync sync_clock;
 std::atomic<bool> requested{false}, running{false};
 TaskHandle_t service_task = nullptr;
@@ -454,6 +457,42 @@ WifiFetchSnapshot fetch_once(const WifiCredentials& credentials, int photo_netwo
   station_netif = nullptr;
   return result;
 }
+// Passive scan: listens for beacons on each channel and sends nothing.
+std::vector<RadarAccessPoint> radar_scan_once() {
+  std::vector<RadarAccessPoint> found;
+  if (!station_netif) station_netif = esp_netif_create_default_wifi_sta();
+  if (!station_netif) return found;
+  wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
+  if (esp_wifi_init(&init) != ESP_OK) {
+    esp_netif_destroy_default_wifi(station_netif);
+    station_netif = nullptr;
+    return found;
+  }
+  if (esp_wifi_set_storage(WIFI_STORAGE_RAM) == ESP_OK && esp_wifi_set_mode(WIFI_MODE_STA) == ESP_OK &&
+      esp_wifi_start() == ESP_OK) {
+    wifi_scan_config_t scan = {};
+    scan.show_hidden = true;
+    scan.scan_type = WIFI_SCAN_TYPE_PASSIVE;
+    scan.scan_time.passive = 110;
+    if (esp_wifi_scan_start(&scan, true) == ESP_OK) {
+      uint16_t count = kRadarMax;
+      std::vector<wifi_ap_record_t> records(kRadarMax);
+      if (esp_wifi_scan_get_ap_records(&count, records.data()) == ESP_OK) {
+        for (uint16_t i = 0; i < count; ++i) {
+          RadarAccessPoint contact;
+          memcpy(contact.bssid, records[i].bssid, sizeof(contact.bssid));
+          contact.rssi = records[i].rssi;
+          found.push_back(contact);
+        }
+      }
+    }
+  }
+  esp_wifi_stop();
+  esp_wifi_deinit();
+  esp_netif_destroy_default_wifi(station_netif);
+  station_netif = nullptr;
+  return found;
+}
 esp_err_t handle_post(httpd_req_t* req) {
   const bool clock = !strcmp(req->uri, "/clock"), cancel = !strcmp(req->uri, "/cancel"), save = !strcmp(req->uri, "/save");
   if (!(clock || cancel || save)) return message(req, 400, "Unknown request.");
@@ -616,6 +655,21 @@ void service_loop(void*) {
       std::lock_guard<std::mutex> lock(portal_mutex);
       fetch_state = result;
     }
+    bool radar = false;
+    {
+      std::lock_guard<std::mutex> lock(portal_mutex);
+      if (radar_pending && !requested && !running && fetch_state.state != WifiFetchState::Pending) {
+        radar_pending = false;
+        radar = true;
+      }
+    }
+    if (radar) {
+      auto found = radar_scan_once();
+      std::lock_guard<std::mutex> lock(portal_mutex);
+      radar_state.contacts = std::move(found);
+      radar_state.scanning = false;
+      ++radar_state.revision;
+    }
     if (requested && !running) {
       bool ok = start_network();
       if (!ok) { requested = false; stop_network(); }
@@ -689,6 +743,15 @@ bool photo_fetch_request(int network, const WifiCredentials* temporary, const st
   fetch_photo_network = network; fetch_photo_handle = std::move(target); fetch_photo_from_profile = from_profile;
   fetch_photo_provider = source.provider; fetch_photo_provider_handle = std::move(source.handle);
   fetch_state = {WifiFetchState::Pending, 0, 0, network, {}};
+  return true;
+}
+RadarSnapshot radar_snapshot() { std::lock_guard<std::mutex> lock(portal_mutex); return radar_state; }
+bool radar_scan_request() {
+  std::lock_guard<std::mutex> lock(portal_mutex);
+  if (radar_state.scanning) return true;
+  if (!service_task || portal.active || portal.starting || requested || running ||
+      fetch_state.state == WifiFetchState::Pending || fetch_state.state == WifiFetchState::Running) return false;
+  radar_pending = radar_state.scanning = true;
   return true;
 }
 bool profile_reset_request(std::string& error) { return queue_profile_reset(error); }

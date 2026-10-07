@@ -80,7 +80,10 @@ public:
                 using Factory = std::unique_ptr<ui::PageView>(*)(ui::Context&, lv_obj_t*);
                 static constexpr Factory factories[] = {
                     ui::make_init, ui::make_schedule, ui::make_after_dark,
-                    ui::make_badge, ui::make_settings
+                    ui::make_badge, ui::make_settings,
+                    ui::make_eyes, ui::make_radar, ui::make_hal,
+                    ui::make_third_eye, ui::make_matrix, ui::make_bit,
+                    ui::make_labyrinth, ui::make_umbrella
                 };
                 page_ = factories[context.page](context, page_host_);
             }
@@ -127,6 +130,7 @@ void ui_tick(uint32_t now_ms) {
     mooncake::GetMooncake().update();
 }
 void ui_rotation_changed() { if (app) app->reflow(); }
+void ui_motion(float x, float y) { context.motion = {true, x, y}; }
 void ui_page(int delta) {
     if (context.setup || context.touch_test || context.reset || delta == 0) return;
     // IDs stay stable for setup returns and diagnostics. The locked invitation

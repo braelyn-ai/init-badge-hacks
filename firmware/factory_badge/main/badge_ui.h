@@ -4,12 +4,19 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 #include <lvgl.h>
 
 namespace badge {
 
 enum class Orientation : uint8_t { Free, Default, UpsideDown };
 enum class ResetState : uint8_t { Ready, Working, Failed, SettingsFailed, Complete };
+
+// One access point heard by the last passive Radar scan.
+struct RadarContact {
+    std::array<uint8_t, 6> bssid{};
+    int8_t rssi = 0;
+};
 
 // The main task owns this model and all UI calls. Avatar memory must remain valid
 // until the next ui_update(), including while LVGL renders the current frame.
@@ -44,6 +51,9 @@ struct UiModel {
     int schedule_current = -1;
     uint16_t schedule_bookmarks = 0;
     ResetState reset_state = ResetState::Ready;
+    std::vector<RadarContact> radar;
+    uint32_t radar_revision = 0; // Bumps when a scan completes, even an empty one.
+    bool radar_scanning = false;
 };
 
 struct UiCallbacks {
@@ -57,6 +67,7 @@ struct UiCallbacks {
     std::function<void()> reset_badge; // Only after a fresh confirmation tap.
     std::function<void()> unlock_after_dark; // Complete touch-entered Morse word.
     std::function<void(bool)> morse_pressed; // Input haptic; false on release/cancellation.
+    std::function<void()> radar_scan; // Queue one passive scan; ignored while Wi-Fi is busy.
 };
 
 struct UiTouchSample {
@@ -70,10 +81,17 @@ struct UiTouchSample {
     uint8_t rotation = 0;
 };
 
+// Gravity along the displayed screen's right/down axes, in g. Fresh samples only.
+struct UiMotion {
+    bool valid = false;
+    float x = 0, y = 0;
+};
+
 void ui_init(lv_display_t* display, UiCallbacks callbacks);
 void ui_update(const UiModel& model);
 void ui_tick(uint32_t now_ms);
 void ui_rotation_changed();
+void ui_motion(float x, float y);
 void ui_page(int delta);
 void ui_button(bool both, int delta);
 void ui_open_after_dark(); // Successful code entry; never interrupts a modal.
@@ -93,6 +111,6 @@ UiTouchSample ui_touch_state();
 bool ui_touch_test_active();
 bool ui_setup_active();
 int ui_page_index();
-int ui_page_count(); // All five pages remain visible, including the locked invite.
+int ui_page_count(); // Every page remains visible, including the locked invite.
 
 } // namespace badge

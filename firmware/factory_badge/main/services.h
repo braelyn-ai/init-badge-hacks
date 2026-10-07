@@ -48,6 +48,17 @@ bool wifi_fetch_request(const WifiCredentials* temporary = nullptr);
 // profile's (USB diagnostics may pass a public test handle).
 bool photo_fetch_request(int network, const WifiCredentials* temporary = nullptr, const std::string* handle = nullptr);
 WifiFetchSnapshot wifi_fetch_snapshot();
+// Radar page: one receive-only (passive) 2.4 GHz scan on the service worker.
+// It never joins or transmits, runs only while setup and fetches are idle, and
+// returns to Wi-Fi off before publishing. Nothing is stored.
+struct RadarAccessPoint { uint8_t bssid[6] = {}; int8_t rssi = 0; };
+struct RadarSnapshot {
+  uint32_t revision = 0; // Bumps per completed scan.
+  bool scanning = false;
+  std::vector<RadarAccessPoint> contacts;
+};
+bool radar_scan_request();
+RadarSnapshot radar_snapshot();
 // Callback runs on the HTTP task; board/clock implementation must serialize RTC
 // access and return success only after RTC, system clock and NVS readback.
 using PhoneClockSync = std::function<bool(int64_t, int, ClockSnapshot&, std::string&)>;

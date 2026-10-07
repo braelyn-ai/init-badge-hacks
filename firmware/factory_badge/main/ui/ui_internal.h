@@ -9,16 +9,20 @@ constexpr int Width = 468;
 constexpr int Height = 466;
 constexpr int HeadingX = 84, HeadingY = 52, HeadingWidth = 300;
 constexpr int ContentTop = 100, ContentBottom = 404;
-constexpr int PageCount = 5;
+constexpr int PageCount = 13;
 constexpr int AfterDarkPage = 2;
 constexpr int SettingsPageIndex = 4;
+// Hack pages follow Settings so the stock page IDs stay stable. They are
+// full-screen: no brand mark, arrows or dots; swipes and pushers still page.
+constexpr int FirstHackPage = 5;
+inline bool immersive_page(int page) { return page >= FirstHackPage; }
 inline bool page_visible(int page, const UiModel&) {
     return page >= 0 && page < PageCount;
 }
 inline int visible_page_count(const UiModel&) {
     return PageCount;
 }
-inline constexpr const char* PageNames[] = {"init()", "Schedule", "Party", "Badge", "Settings"};
+inline constexpr const char* PageNames[] = {"init()", "Schedule", "Party", "Badge", "Settings", "Eyes", "Radar", "HAL", "Third Eye", "Matrix", "Bit", "Labyrinth", "Umbrella"};
 inline constexpr const char* HackUrl = "https://workos.com/init/badge";
 
 struct Context {
@@ -35,6 +39,7 @@ struct Context {
     bool rebuild = false;
     uint8_t rotation = 2;
     UiTouchSample touch;
+    UiMotion motion;
     std::string ssid, password, ip, setup_status;
 };
 
@@ -56,6 +61,14 @@ std::unique_ptr<PageView> make_schedule(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_after_dark(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_badge(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_settings(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_eyes(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_radar(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_hal(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_third_eye(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_matrix(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_bit(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_labyrinth(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_umbrella(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_setup(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_calibration(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_touch_test(Context&, lv_obj_t*);

@@ -51,15 +51,16 @@ void Chrome::update() {
         (!model.name.empty() || !model.company.empty() || model.avatar || !model.social_url.empty());
     // A configured Badge keeps the brand mark and arrows but drops the dots.
     set_hidden(root_, context_.setup || context_.touch_test || context_.reset);
-    set_hidden(brand_, context_.page == 0);
+    const bool immersive = immersive_page(context_.page);
+    set_hidden(brand_, context_.page == 0 || immersive);
     set_hidden(status_root_, context_.setup || context_.touch_test || context_.reset);
     set_text(footer_, !model.photo_status.empty() ? model.photo_status
         : context_.page == SettingsPageIndex && model.settings_pending ? "Saving settings..." : "");
     const bool submenu = context_.page == SettingsPageIndex && context_.settings_submenu;
-    set_hidden(left_, submenu);
-    set_hidden(right_, submenu);
+    set_hidden(left_, submenu || immersive);
+    set_hidden(right_, submenu || immersive);
     const int count = visible_page_count(model);
-    const bool dotless = submenu || profile_filled;
+    const bool dotless = submenu || profile_filled || immersive;
     if (page_ != context_.page || visible_count_ != count || dotless_ != dotless) {
         dotless_ = dotless;
         page_ = context_.page;
