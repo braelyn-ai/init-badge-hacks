@@ -55,6 +55,7 @@ struct UiModel {
     uint32_t radar_revision = 0; // Bumps when a scan completes, even an empty one.
     bool radar_scanning = false;
     int labyrinth_finished = 0; // Highest Labyrinth level completed; saved across restarts.
+    int jump_best = 0;          // Best Jump score; saved across restarts.
 };
 
 struct UiCallbacks {
@@ -70,6 +71,7 @@ struct UiCallbacks {
     std::function<void(bool)> morse_pressed; // Input haptic; false on release/cancellation.
     std::function<void()> radar_scan; // Queue one passive scan; ignored while Wi-Fi is busy.
     std::function<void(int)> labyrinth_finished; // A level was completed; main saves it.
+    std::function<void(int)> jump_best;          // A new best Jump score; main saves it.
 };
 
 struct UiTouchSample {

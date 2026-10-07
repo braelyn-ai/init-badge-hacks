@@ -51,7 +51,8 @@ int random_between(int low, int high); // Inclusive.
 // For shapes native widgets cannot make (polygons, glyph grids). The painter
 // runs inside LVGL's render pass with the object's absolute coordinates; draw
 // in those coordinates. Request a repaint with lv_obj_invalidate(object), or
-// lv_obj_invalidate_area() for part of it. The painter is destroyed with the
+// lv_obj_invalidate_area() for part of it. LVGL keeps at most 32 pending areas
+// and does not merge neighbours: past that it repaints the whole screen. The painter is destroyed with the
 // object. after_children paints over the object's children (e.g. eyelids).
 using Painter = std::function<void(lv_layer_t* layer, const lv_area_t& coords)>;
 void on_paint(lv_obj_t* object, Painter painter, bool after_children = false);
@@ -64,6 +65,7 @@ void fill_triangle(lv_layer_t* layer, float x0, float y0, float x1, float y1, fl
                    lv_color_t color, lv_opa_t opa = LV_OPA_COVER);
 void fill_rect(lv_layer_t* layer, int x, int y, int width, int height,
                lv_color_t color, lv_opa_t opa = LV_OPA_COVER);
+void fill_circle(lv_layer_t* layer, int cx, int cy, int radius, lv_color_t color, lv_opa_t opa = LV_OPA_COVER);
 void draw_line(lv_layer_t* layer, float x0, float y0, float x1, float y1, int width,
                lv_color_t color, lv_opa_t opa = LV_OPA_COVER);
 // One character with its top-left at (x, y). The design fonts cover U+0020-007E

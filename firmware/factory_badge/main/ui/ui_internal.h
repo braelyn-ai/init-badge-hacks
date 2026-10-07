@@ -9,7 +9,7 @@ constexpr int Width = 468;
 constexpr int Height = 466;
 constexpr int HeadingX = 84, HeadingY = 52, HeadingWidth = 300;
 constexpr int ContentTop = 100, ContentBottom = 404;
-constexpr int PageCount = 13;
+constexpr int PageCount = 15;
 constexpr int AfterDarkPage = 2;
 constexpr int SettingsPageIndex = 4;
 // Hack pages follow Settings so the stock page IDs stay stable. They are
@@ -22,7 +22,7 @@ inline bool page_visible(int page, const UiModel&) {
 inline int visible_page_count(const UiModel&) {
     return PageCount;
 }
-inline constexpr const char* PageNames[] = {"init()", "Schedule", "Party", "Badge", "Settings", "Eyes", "Radar", "HAL", "Third Eye", "Matrix", "Bit", "Labyrinth", "Umbrella"};
+inline constexpr const char* PageNames[] = {"init()", "Schedule", "Party", "Badge", "Settings", "Eyes", "Radar", "HAL", "Third Eye", "Matrix", "Bit", "Labyrinth", "Umbrella", "Jump", "Rotary"};
 inline constexpr const char* HackUrl = "https://workos.com/init/badge";
 
 struct Context {
@@ -69,6 +69,8 @@ std::unique_ptr<PageView> make_matrix(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_bit(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_labyrinth(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_umbrella(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_jump(Context&, lv_obj_t*);
+std::unique_ptr<PageView> make_rotary(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_setup(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_calibration(Context&, lv_obj_t*);
 std::unique_ptr<PageView> make_touch_test(Context&, lv_obj_t*);

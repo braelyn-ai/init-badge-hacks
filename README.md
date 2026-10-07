@@ -2,7 +2,7 @@
 
 A fork of the WorkOS init() conference badge firmware
 ([chantastic/stopwatch](https://github.com/chantastic/stopwatch)) for the
-**M5Stack StopWatch**, with eight extra full-screen pages after Settings.
+**M5Stack StopWatch**, with ten extra full-screen pages after Settings.
 Everything the stock firmware does is unchanged, and installing it keeps your
 profile, photo and settings.
 
@@ -16,6 +16,8 @@ profile, photo and settings.
 | **Bit** | Tron's Bit, floating and tumbling | Answers YES or NO; tap again to clear |
 | **Labyrinth** | Hold the badge flat and tilt it to roll a marble to the centre of a generated maze | Restart level; progress is saved |
 | **Umbrella** | An Umbrella Corporation employee ID with your name and photo. Your job title is rolled from a hash of your name: 55% common, 25% uncommon, 13% rare, 5.5% epic, 1.5% legendary | |
+| **Jump** | Doodle Jump: the jumper bounces by itself and you tilt the badge to steer onto the next platform. Works hanging on a lanyard. Best score is saved | Retry after a fall |
+| **Rotary** | A Wankel rotary engine with the real geometry: the rotor orbits on its eccentric shaft, fire in the chambers. Twist the badge like a motorcycle grip to open the throttle | Blips the throttle |
 
 These pages hide the arrows and dots: swipe sideways or use the side buttons.
 From the init() screen, paging left reaches them fastest.
@@ -59,7 +61,7 @@ paste the skill below as instructions.
 
 # Install the hack pages on an init() badge
 
-You are helping someone put this firmware on their own badge. It adds eight
+You are helping someone put this firmware on their own badge. It adds ten
 full-screen pages after Settings and changes nothing else. The install writes
 only the 3 MiB app slot; profile, photo, Wi-Fi override, clock and settings
 survive. Never erase flash, never write the bootloader or partition table, and
@@ -112,7 +114,7 @@ to the owner and do not work around it with raw esptool commands.
 
 ## 5. Confirm with the owner
 
-Success looks like `Done: build v1.2.0-hack.N, 13 pages, profile kept.` On the
+Success looks like `Done: build v1.2.0-hack.N, 15 pages, profile kept.` On the
 badge, their Badge page still shows their name and photo. The new pages come
 after Settings; from the init() screen, paging left reaches them fastest.
 
@@ -126,6 +128,8 @@ after Settings; from the init() screen, paging left reaches them fastest.
 | Bit | Tron's Bit, floating | Answers YES or NO; tap again to clear |
 | Labyrinth | Tilt the badge flat to roll a marble to the centre of the maze | Restarts the level; progress is saved |
 | Umbrella | An Umbrella Corporation ID with their name, photo and a job title rolled from their name | |
+| Jump | Doodle Jump: tilt to steer between platforms; best score is saved | Retry after a fall |
+| Rotary | A Wankel rotary engine; twisting the badge like a motorcycle grip opens the throttle | Blips the throttle |
 
 These pages have no arrows or dots: swipe sideways or use the side buttons.
 The Radar page turns the Wi-Fi radio on in receive-only mode for about two

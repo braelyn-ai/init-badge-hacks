@@ -20,6 +20,8 @@ PAGES = [
     ("bit", "Bit", "Tap answers yes or no; tap again to clear", [2000, 5000, 7000, 10000]),
     ("labyrinth", "Labyrinth", "Tilt the badge to roll the marble", []),
     ("umbrella", "Umbrella Corp ID", "Your job title is rolled from a hash of your name", []),
+    ("jump", "Jump", "Tilt to steer; tap to retry", [9000]),
+    ("rotary", "Rotary Engine", "Twist the badge for throttle; tap to blip", [5000]),
 ]
 FLAT = {"labyrinth"}  # Pages previewed lying flat and tilted, not swinging on a lanyard.
 wanted = set(sys.argv[1:])

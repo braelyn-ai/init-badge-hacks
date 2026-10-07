@@ -1,11 +1,11 @@
 ---
 name: install-badge-hacks
-description: Install the hack-pages firmware (Googly Eyes, Radar, HAL 9000, Third Eye, Matrix, Bit, Labyrinth, Umbrella ID) on a WorkOS init() conference badge (M5Stack StopWatch) over USB, keeping the owner's profile, photo and settings. Use when someone asks to flash, install, update, or restore this badge firmware.
+description: Install the hack-pages firmware (Googly Eyes, Radar, HAL 9000, Third Eye, Matrix, Bit, Labyrinth, Umbrella ID, Jump, Rotary engine) on a WorkOS init() conference badge (M5Stack StopWatch) over USB, keeping the owner's profile, photo and settings. Use when someone asks to flash, install, update, or restore this badge firmware.
 ---
 
 # Install the hack pages on an init() badge
 
-You are helping someone put this firmware on their own badge. It adds eight
+You are helping someone put this firmware on their own badge. It adds ten
 full-screen pages after Settings and changes nothing else. The install writes
 only the 3 MiB app slot; profile, photo, Wi-Fi override, clock and settings
 survive. Never erase flash, never write the bootloader or partition table, and
@@ -58,7 +58,7 @@ to the owner and do not work around it with raw esptool commands.
 
 ## 5. Confirm with the owner
 
-Success looks like `Done: build v1.2.0-hack.N, 13 pages, profile kept.` On the
+Success looks like `Done: build v1.2.0-hack.N, 15 pages, profile kept.` On the
 badge, their Badge page still shows their name and photo. The new pages come
 after Settings; from the init() screen, paging left reaches them fastest.
 
@@ -72,6 +72,8 @@ after Settings; from the init() screen, paging left reaches them fastest.
 | Bit | Tron's Bit, floating | Answers YES or NO; tap again to clear |
 | Labyrinth | Tilt the badge flat to roll a marble to the centre of the maze | Restarts the level; progress is saved |
 | Umbrella | An Umbrella Corporation ID with their name, photo and a job title rolled from their name | |
+| Jump | Doodle Jump: tilt to steer between platforms; best score is saved | Retry after a fall |
+| Rotary | A Wankel rotary engine; twisting the badge like a motorcycle grip opens the throttle | Blips the throttle |
 
 These pages have no arrows or dots: swipe sideways or use the side buttons.
 The Radar page turns the Wi-Fi radio on in receive-only mode for about two

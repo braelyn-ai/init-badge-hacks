@@ -480,8 +480,8 @@ void pollReset() {
         bookmarks = emptyBookmarks;
         afterDark.restore(badge_after_dark::Unlock::SavedLocked);
         // Best effort: game progress is not part of the reset's success.
-        model.labyrinth_finished = 0;
-        nvs_erase_key(preferences, "hack_maze"); nvs_commit(preferences);
+        model.labyrinth_finished = model.jump_best = 0;
+        nvs_erase_key(preferences, "hack_maze"); nvs_erase_key(preferences, "hack_jump"); nvs_commit(preferences);
         board::setBrightness(settings.brightness);
         rotationPending = true;
         resetNeedsPreferences = false;
@@ -542,6 +542,8 @@ extern "C" void app_main() {
         nvs_get_u32(preferences, "agenda_saved", &savedBookmarks);
         uint8_t savedMaze = 0;
         if (nvs_get_u8(preferences, "hack_maze", &savedMaze) == ESP_OK) model.labyrinth_finished = savedMaze;
+        uint32_t savedJump = 0;
+        if (nvs_get_u32(preferences, "hack_jump", &savedJump) == ESP_OK) model.jump_best = int(savedJump);
     }
     afterDark.restore(savedUnlock);
     bookmarks.restore(savedBookmarks);
@@ -568,6 +570,11 @@ extern "C" void app_main() {
     };
     callbacks.bookmark = [](int index) {
         if (bookmarks.toggle(index, board::millis())) refreshModel();
+    };
+    callbacks.jump_best = [](int score) {
+        model.jump_best = score;
+        if (preferencesReady && nvs_set_u32(preferences, "hack_jump", uint32_t(score)) == ESP_OK &&
+            nvs_commit(preferences) == ESP_OK) ++preferenceWrites;
     };
     callbacks.reset_badge = requestReset;
     callbacks.radar_scan = [] { badge::radar_scan_request(); };

@@ -111,6 +111,15 @@ void fill_rect(lv_layer_t* layer, int x, int y, int width, int height, lv_color_
     const lv_area_t area = {x, y, x + width - 1, y + height - 1};
     lv_draw_rect(layer, &dsc, &area);
 }
+void fill_circle(lv_layer_t* layer, int cx, int cy, int radius, lv_color_t color, lv_opa_t opa) {
+    lv_draw_rect_dsc_t dsc;
+    lv_draw_rect_dsc_init(&dsc);
+    dsc.bg_color = color;
+    dsc.bg_opa = opa;
+    dsc.radius = LV_RADIUS_CIRCLE;
+    const lv_area_t area = {cx - radius, cy - radius, cx + radius, cy + radius};
+    lv_draw_rect(layer, &dsc, &area);
+}
 void draw_line(lv_layer_t* layer, float x0, float y0, float x1, float y1, int width,
                lv_color_t color, lv_opa_t opa) {
     lv_draw_line_dsc_t dsc;

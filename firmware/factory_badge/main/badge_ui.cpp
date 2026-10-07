@@ -83,7 +83,8 @@ public:
                     ui::make_badge, ui::make_settings,
                     ui::make_eyes, ui::make_radar, ui::make_hal,
                     ui::make_third_eye, ui::make_matrix, ui::make_bit,
-                    ui::make_labyrinth, ui::make_umbrella
+                    ui::make_labyrinth, ui::make_umbrella, ui::make_jump,
+                    ui::make_rotary
                 };
                 page_ = factories[context.page](context, page_host_);
             }
