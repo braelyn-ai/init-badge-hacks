@@ -479,6 +479,9 @@ void pollReset() {
         settings = defaults;
         bookmarks = emptyBookmarks;
         afterDark.restore(badge_after_dark::Unlock::SavedLocked);
+        // Best effort: game progress is not part of the reset's success.
+        model.labyrinth_finished = 0;
+        nvs_erase_key(preferences, "hack_maze"); nvs_commit(preferences);
         board::setBrightness(settings.brightness);
         rotationPending = true;
         resetNeedsPreferences = false;
@@ -537,6 +540,8 @@ extern "C" void app_main() {
         nvs_get_u32(preferences, "prefs", &value);
         nvs_get_u8(preferences, "after_dark_v1", &savedUnlock);
         nvs_get_u32(preferences, "agenda_saved", &savedBookmarks);
+        uint8_t savedMaze = 0;
+        if (nvs_get_u8(preferences, "hack_maze", &savedMaze) == ESP_OK) model.labyrinth_finished = savedMaze;
     }
     afterDark.restore(savedUnlock);
     bookmarks.restore(savedBookmarks);
@@ -566,6 +571,12 @@ extern "C" void app_main() {
     };
     callbacks.reset_badge = requestReset;
     callbacks.radar_scan = [] { badge::radar_scan_request(); };
+    callbacks.labyrinth_finished = [](int level) {
+        // Levels are finished minutes apart, so each one is written at once.
+        model.labyrinth_finished = std::clamp(level, 0, 255);
+        if (preferencesReady && nvs_set_u8(preferences, "hack_maze", uint8_t(model.labyrinth_finished)) == ESP_OK &&
+            nvs_commit(preferences) == ESP_OK) ++preferenceWrites;
+    };
     callbacks.unlock_after_dark = [] {
         if (afterDark.unlock(board::millis())) refreshModel();
     };

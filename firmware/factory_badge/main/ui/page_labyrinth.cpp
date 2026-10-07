@@ -207,6 +207,7 @@ public:
         label(won_, "SOLVED", 18, 138, 180, &font_mono_18, goal());
         set_hidden(won_, true);
         on_tap(root_, [this] { tapped(); });
+        level_ = context_.model.labyrinth_finished + 1; // Resume after the last level finished.
         build();
     }
     void update() override {
@@ -234,6 +235,7 @@ public:
             set_hidden(ball_, true);
             set_hidden(won_, false);
             phase_ = Phase::Won; since_ = now;
+            if (context_.callbacks.labyrinth_finished) context_.callbacks.labyrinth_finished(level_);
             break;
         }
         case Phase::Won:

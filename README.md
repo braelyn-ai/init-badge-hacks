@@ -14,7 +14,7 @@ profile, photo and settings.
 | **Third Eye** | A sleeping eye that opens into a psychedelic one | Sleep / wake |
 | **Matrix** | Falling green glyphs | Types a message |
 | **Bit** | Tron's Bit, floating and tumbling | Answers YES or NO; tap again to clear |
-| **Labyrinth** | Hold the badge flat and tilt it to roll a marble to the centre of a generated maze | Restart level |
+| **Labyrinth** | Hold the badge flat and tilt it to roll a marble to the centre of a generated maze | Restart level; progress is saved |
 | **Umbrella** | An Umbrella Corporation employee ID with your name and photo. Your job title is rolled from a hash of your name: 55% common, 25% uncommon, 13% rare, 5.5% epic, 1.5% legendary | |
 
 These pages hide the arrows and dots: swipe sideways or use the side buttons.
@@ -117,7 +117,7 @@ after Settings; from the init() screen, paging left reaches them fastest.
 | Third Eye | Opens into a psychedelic eye | Sleep / wake |
 | Matrix | Falling green glyphs | Types a message |
 | Bit | Tron's Bit, floating | Answers YES or NO; tap again to clear |
-| Labyrinth | Tilt the badge flat to roll a marble to the centre of the maze | Restarts the level |
+| Labyrinth | Tilt the badge flat to roll a marble to the centre of the maze | Restarts the level; progress is saved |
 | Umbrella | An Umbrella Corporation ID with their name, photo and a job title rolled from their name | |
 
 These pages have no arrows or dots: swipe sideways or use the side buttons.

@@ -70,7 +70,7 @@ after Settings; from the init() screen, paging left reaches them fastest.
 | Third Eye | Opens into a psychedelic eye | Sleep / wake |
 | Matrix | Falling green glyphs | Types a message |
 | Bit | Tron's Bit, floating | Answers YES or NO; tap again to clear |
-| Labyrinth | Tilt the badge flat to roll a marble to the centre of the maze | Restarts the level |
+| Labyrinth | Tilt the badge flat to roll a marble to the centre of the maze | Restarts the level; progress is saved |
 | Umbrella | An Umbrella Corporation ID with their name, photo and a job title rolled from their name | |
 
 These pages have no arrows or dots: swipe sideways or use the side buttons.

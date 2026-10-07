@@ -75,20 +75,12 @@ public:
     void update() override {
         const auto& model = context_.model;
         if (revision_ != model.profile_revision || name_ != model.name || avatar_ != model.avatar) rebuild();
-        // The two rarest tiers shimmer.
-        if (!rarity_ || tier_ > 1 || !clock_.due()) return;
-        const float level = 0.7f + 0.3f * std::sin(clock_.seconds() * 4.0f);
-        const int step = int(level * 16);
-        if (step == step_) return;
-        step_ = step;
-        lv_obj_set_style_text_color(rarity_, hack::scaled(lv_color_hex(Tiers[tier_].color), step / 16.0f), 0);
     }
 private:
     void rebuild() {
         const auto& model = context_.model;
         // Remove every image user before changing its descriptor or backing data.
         lv_obj_clean(root_);
-        rarity_ = nullptr; step_ = -1;
 #if LV_CACHE_DEF_SIZE > 0
         lv_image_cache_drop(&image_);
 #endif
@@ -142,16 +134,22 @@ private:
             if (roll < Tiers[i].weight) { tier_ = i; break; }
             roll -= Tiers[i].weight;
         }
+        // The author's privilege: anyone called Braelyn is always legendary.
+        std::string first = hack::first_name(context_, "");
+        for (auto& c : first) if (c >= 'A' && c <= 'Z') c += 32;
+        const bool author = first == "braelyn";
+        if (author) tier_ = 0;
         const Tier& tier = Tiers[tier_];
         const lv_color_t color = lv_color_hex(tier.color);
         label(root_, registered ? name_.c_str() : "UNREGISTERED", 74, 260, 320, &font_mono_24, white());
-        auto* title = label(root_, registered ? tier.titles[(hash >> 10) % tier.count] : "Visitor: escort required",
+        auto* title = label(root_, !registered ? "Visitor: escort required" : author ? "Head of Human Research"
+                                : tier.titles[(hash >> 10) % tier.count],
                             84, 296, 300, &font_sans_20, registered ? color : muted());
         lv_label_set_long_mode(title, LV_LABEL_LONG_WRAP);
         if (!registered) return;
         char text[48];
         std::snprintf(text, sizeof(text), "%s \xc2\xb7 ID %06u", tier.name, unsigned((hash >> 4) % 1000000));
-        rarity_ = label(root_, text, 94, 356, 280, &font_mono_12, color);
+        label(root_, text, 94, 356, 280, &font_mono_12, color);
         // A barcode of the hash: thin and thick bars, as on a real ID.
         hack::surface(root_, Cx - 80, 384, 160, 26, [hash](lv_layer_t* layer, const lv_area_t& coords) {
             int x = int(coords.x1);
@@ -164,13 +162,11 @@ private:
             }
         });
     }
-    lv_obj_t* rarity_ = nullptr;
-    int tier_ = 4, step_ = -1;
+    int tier_ = 4;
     uint32_t revision_ = 0;
     const uint16_t* avatar_ = nullptr;
     lv_image_dsc_t image_{};
     std::string name_;
-    hack::FrameClock clock_{80};
 };
 std::unique_ptr<PageView> make_umbrella(Context& c, lv_obj_t* p) { return std::make_unique<UmbrellaPage>(c, p); }
 } // namespace badge::ui
